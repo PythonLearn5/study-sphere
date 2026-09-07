@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Groq from 'groq-sdk'
+import { LLM_DISABLED, LLM_MODELS, llmClient } from '@/lib/llm'
 
 interface FlowchartGenerationRequest {
   concept: string
@@ -7,21 +7,18 @@ interface FlowchartGenerationRequest {
   complexity: string
 }
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-})
-
 async function generateMermaidWithAI(concept: string, chartType: string, complexity: string): Promise<string> {
-  if (!process.env.GROQ_API_KEY) {
-    throw new Error('GROQ_API_KEY not configured')
+  if (LLM_DISABLED || !llmClient) {
+    // 开发模式下，直接返回降级流程图
+    return generateFallbackCode(concept, chartType, complexity, true)
   }
 
   const prompt = createPromptForChartType(concept, chartType, complexity)
   
-  const completion = await groq.chat.completions.create({
+  const completion = await llmClient.chat.completions.create({
     messages: [
       {
-        role: "system",
+        role: 'system',
         content: `You are an expert at creating Mermaid diagrams. Generate only valid Mermaid syntax without any explanation or markdown formatting. 
 
 For flowcharts, follow this EXACT syntax:
@@ -40,16 +37,16 @@ flowchart TD
     C --> END(["End"])
     D --> END
 
-Ensure all syntax is valid and each node has descriptive text in quotes.`
+Ensure all syntax is valid and each node has descriptive text in quotes.`,
       },
       {
-        role: "user", 
-        content: prompt
-      }
+        role: 'user', 
+        content: prompt,
+      },
     ],
-    model: "gemma2-9b-it",
+    model: LLM_MODELS.flowchart,
     temperature: 0.3,
-    max_tokens: 1000
+    max_tokens: 1000,
   })
 
   const result = completion.choices[0]?.message?.content?.trim()
@@ -57,7 +54,6 @@ Ensure all syntax is valid and each node has descriptive text in quotes.`
     throw new Error('No response from AI')
   }
 
-  // Clean up the response to ensure it's valid Mermaid
   return sanitizeMermaidCode(result)
 }
 
@@ -181,12 +177,17 @@ function sanitizeMermaidCode(code: string): string {
   return cleaned
 }
 
-function generateFallbackCode(concept: string, chartType: string, complexity: string): string {
+function generateFallbackCode(concept: string, chartType: string, complexity: string, mocked = false): string {
   const safeConcept = concept.replace(/[^\w\s-]/g, '').trim().substring(0, 50)
-  
-  return `flowchart TD
+  const prefix = mocked
+    ? '%% [开发模式 Mock 流程图 - 请配置 LLM_API_KEY/LLM_BASE_URL 获取真实 AI 生成结果]\n'
+    : ''
+  return (
+    prefix +
+    `flowchart TD
     A["Start: ${safeConcept}"] --> B["Process"]
     B --> C["End"]`
+  )
 }
 
 export async function POST(req: NextRequest) {
@@ -203,31 +204,28 @@ export async function POST(req: NextRequest) {
     if (!concept) {
       return NextResponse.json(
         { error: 'Concept description is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    // Use AI to generate Mermaid code
     const mermaidCode = await generateMermaidWithAI(concept, chartType, complexity)
     
     return NextResponse.json({
       success: true,
       mermaidCode,
       chartType,
-      concept
+      concept,
     })
-
   } catch (error) {
     console.error('Error generating flowchart:', error)
     
-    // Fallback to template if AI fails
     const fallbackCode = generateFallbackCode(concept || 'process', chartType, complexity)
     return NextResponse.json({
       success: true,
       mermaidCode: fallbackCode,
       chartType,
       concept: concept || 'process',
-      warning: 'AI generation failed, using template fallback'
+      warning: 'AI generation failed, using template fallback',
     })
   }
 }

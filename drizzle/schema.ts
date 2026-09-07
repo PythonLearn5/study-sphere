@@ -150,57 +150,6 @@ export const users = sqliteTable("users", {
 	uniqueIndex("users_email_unique").on(table.email),
 ]);
 
-export const quizBookmarks = sqliteTable("quiz_bookmarks", {
-	id: text().primaryKey().notNull(),
-	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" } ),
-	quizId: text("quiz_id").notNull().references(() => quizzes.id, { onDelete: "cascade" } ),
-	createdAt: integer("created_at").notNull(),
-});
-
-export const quizCompletions = sqliteTable("quiz_completions", {
-	id: text().primaryKey().notNull(),
-	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" } ),
-	quizId: text("quiz_id").notNull().references(() => quizzes.id, { onDelete: "cascade" } ),
-	score: integer().notNull(),
-	totalQuestions: integer("total_questions").notNull(),
-	timeSpent: integer("time_spent").notNull(),
-	completedAt: integer("completed_at").notNull(),
-	answers: text().notNull(),
-});
-
-export const quizSubjects = sqliteTable("quiz_subjects", {
-	id: text().primaryKey().notNull(),
-	name: text().notNull(),
-	description: text(),
-	color: text().default("#3B82F6").notNull(),
-	icon: text().default("📚").notNull(),
-	createdAt: integer("created_at").notNull(),
-	updatedAt: integer("updated_at").notNull(),
-});
-
-export const quizTopics = sqliteTable("quiz_topics", {
-	id: text().primaryKey().notNull(),
-	subjectId: text("subject_id").notNull().references(() => quizSubjects.id, { onDelete: "cascade" } ),
-	name: text().notNull(),
-	description: text(),
-	createdAt: integer("created_at").notNull(),
-	updatedAt: integer("updated_at").notNull(),
-});
-
-export const quizzes = sqliteTable("quizzes", {
-	id: text().primaryKey().notNull(),
-	userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" } ),
-	subjectId: text("subject_id").notNull().references(() => quizSubjects.id, { onDelete: "cascade" } ),
-	topicId: text("topic_id").notNull().references(() => quizTopics.id, { onDelete: "cascade" } ),
-	title: text().notNull(),
-	description: text().notNull(),
-	difficulty: text().default("intermediate").notNull(),
-	questions: text().notNull(),
-	timeLimit: integer("time_limit").default(300).notNull(),
-	createdAt: integer("created_at").notNull(),
-	updatedAt: integer("updated_at").notNull(),
-});
-
 export const quizSubjects = sqliteTable("quiz_subjects", {
 	id: text().primaryKey().notNull(),
 	name: text().notNull(),
@@ -257,4 +206,3 @@ export const quizCompletions = sqliteTable("quiz_completions", {
 (table) => [
 	uniqueIndex("quiz_completions_user_quiz_unique").on(table.userId, table.quizId),
 ]);
-

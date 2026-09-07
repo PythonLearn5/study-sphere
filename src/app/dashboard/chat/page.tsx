@@ -21,7 +21,19 @@ export default function StudySphereChat() {
     isLoading,
   } = useCopilotChat();
 
-  const safeVisibleMessages = visibleMessages ?? [];
+  // 调试用：每次 visibleMessages 变化打印到 Console，方便排查后端有没有把消息传回来
+  const prevCount = useRef<number>(-1);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const count = Array.isArray(visibleMessages) ? visibleMessages.length : -1;
+    if (count !== prevCount.current) {
+      prevCount.current = count;
+      console.log(`[Chat Debug] visibleMessages count=${count}`, visibleMessages);
+      setTick((t) => t + 1);
+    }
+  }, [visibleMessages]);
+
+  const safeVisibleMessages: any[] = Array.isArray(visibleMessages) ? visibleMessages : [];
 
   const [inputValue, setInputValue] = useState('');
   const [showFullChat, setShowFullChat] = useState(false);
@@ -32,12 +44,31 @@ export default function StudySphereChat() {
   const [chatHistory, setChatHistory] = useState<{ id: string; prompt: string; response: string }[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  const messages: Message[] = safeVisibleMessages.map(msg => {
-    const textMsg = msg as TextMessage;
+  const messages: Message[] = safeVisibleMessages.map((msg, i) => {
+    const textMsg: any = msg as TextMessage;
+    // CopilotKit 的消息结构可能是 TextMessage（有 role/content）或 LangChain BaseMessage（content 是数组/字符串）
+    // 这里做兜底，避免字段名不匹配导致渲染空内容
+    let rawContent: any =
+      (textMsg as any).content ??
+      (Array.isArray((textMsg as any).parts) ? (textMsg as any).parts : undefined) ??
+      "";
+    if (Array.isArray(rawContent)) {
+      rawContent = rawContent
+        .map((part: any) => (typeof part === "string" ? part : part?.text ?? part?.content ?? ""))
+        .filter(Boolean)
+        .join("");
+    }
+    const rawRole: any = (textMsg as any).role ?? (textMsg as any)._getType?.();
+    const isUser =
+      rawRole === Role.User ||
+      rawRole === "user" ||
+      rawRole === "User" ||
+      typeof rawRole === "function" && rawRole() === "human" ||
+      (textMsg as any).getType?.() === "human";
     return {
-      content: textMsg.content ?? '',
-      role: textMsg.role === Role.User ? 'User' : 'Assistant',
-      createdAt: textMsg.createdAt || new Date()
+      content: String(rawContent ?? ""),
+      role: isUser ? "User" : "Assistant",
+      createdAt: (textMsg as any).createdAt ?? (textMsg as any).response_metadata?.createdAt ?? new Date(Date.now() - i * 1000),
     };
   });
 
@@ -52,7 +83,9 @@ export default function StudySphereChat() {
   const sendMessage = (content: string) => {
     if (!content.trim() || isSending) return;
     setIsSending(true);
-    appendMessage?.(new TextMessage({ content: content.trim(), role: Role.User }));
+    const userMsg = new TextMessage({ content: content.trim(), role: Role.User });
+    console.log("[Chat Debug] append user message:", userMsg);
+    appendMessage?.(userMsg);
     setInputValue('');
     setShowFullChat(true);
   };

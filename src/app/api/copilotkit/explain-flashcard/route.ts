@@ -1,25 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Groq from 'groq-sdk'
-
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-})
+import { LLM_DISABLED, LLM_MODELS, llmClient } from '@/lib/llm'
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.GROQ_API_KEY) {
-      return NextResponse.json(
-        { error: 'GROQ_API_KEY is not configured' },
-        { status: 500 }
-      )
-    }
-
     const { flashcard, userQuestion, studyMaterial } = await request.json()
 
     if (!flashcard || !userQuestion) {
       return NextResponse.json(
         { error: 'Flashcard and question are required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -44,40 +33,49 @@ Please provide a helpful, educational explanation that:
 
 Keep your response concise but informative (2-3 paragraphs maximum).`
 
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: "You are a knowledgeable and patient tutor. Provide clear, helpful explanations that enhance student understanding."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.7,
-      max_tokens: 500
-    })
+    let explanation: string
+    if (LLM_DISABLED || !llmClient) {
+      explanation =
+        `🤖 [开发模式 Mock 讲解]\n\n你问的是："${userQuestion}"\n\n` +
+        `当前闪卡主题：${flashcard.topic || '未分类'}。\n` +
+        `配置好 LLM_API_KEY / LLM_BASE_URL 并去掉 DISABLE_LLM=true 后，这里会由 AI 生成真实讲解。`
+    } else {
+      const completion = await llmClient.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a knowledgeable and patient tutor. Provide clear, helpful explanations that enhance student understanding.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        model: LLM_MODELS.fast,
+        temperature: 0.7,
+        max_tokens: 500,
+      })
 
-    const explanation = completion.choices[0]?.message?.content
+      explanation = completion.choices[0]?.message?.content || ''
+    }
+
     if (!explanation) {
       throw new Error('No explanation generated')
     }
 
     return NextResponse.json({
-      explanation: explanation.trim()
+      explanation: explanation.trim(),
     })
-
   } catch (error) {
     console.error('Error generating explanation:', error)
         
     return NextResponse.json(
       { 
         error: 'Failed to generate explanation',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
