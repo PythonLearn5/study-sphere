@@ -82,7 +82,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@types/screenfull": "^4.0.0"
+    "@types/screenfull": "^4.0.0",
     "@types/react-google-recaptcha": "^2.1.9",
     "@types/unist": "^3.0.3",
     "postcss": "^8",

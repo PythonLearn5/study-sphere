@@ -21,9 +21,17 @@ export async function POST(request: NextRequest) {
 
     const { email, password, name, recaptchaToken } = body;
 
-    if (!email || !password || !name || !recaptchaToken) {
+    const isDev = process.env.NODE_ENV === 'development';
+    const hasSecret = !!process.env.RECAPTCHA_SECRET_KEY;
+    if (!email || !password || !name) {
       return NextResponse.json(
-        { error: 'Email, password, name, and reCAPTCHA are required' },
+        { error: 'Email, password, and name are required' },
+        { status: 400 }
+      );
+    }
+    if (!isDev && hasSecret && !recaptchaToken) {
+      return NextResponse.json(
+        { error: 'reCAPTCHA is required' },
         { status: 400 }
       );
     }

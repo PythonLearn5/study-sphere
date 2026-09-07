@@ -21,6 +21,8 @@ export default function StudySphereChat() {
     isLoading,
   } = useCopilotChat();
 
+  const safeVisibleMessages = visibleMessages ?? [];
+
   const [inputValue, setInputValue] = useState('');
   const [showFullChat, setShowFullChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -30,10 +32,10 @@ export default function StudySphereChat() {
   const [chatHistory, setChatHistory] = useState<{ id: string; prompt: string; response: string }[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  const messages: Message[] = visibleMessages.map(msg => {
+  const messages: Message[] = safeVisibleMessages.map(msg => {
     const textMsg = msg as TextMessage;
     return {
-      content: textMsg.content,
+      content: textMsg.content ?? '',
       role: textMsg.role === Role.User ? 'User' : 'Assistant',
       createdAt: textMsg.createdAt || new Date()
     };
@@ -50,7 +52,7 @@ export default function StudySphereChat() {
   const sendMessage = (content: string) => {
     if (!content.trim() || isSending) return;
     setIsSending(true);
-    appendMessage(new TextMessage({ content: content.trim(), role: Role.User }));
+    appendMessage?.(new TextMessage({ content: content.trim(), role: Role.User }));
     setInputValue('');
     setShowFullChat(true);
   };
@@ -68,15 +70,15 @@ export default function StudySphereChat() {
   };
 
   const clearChat = () => {
-    setMessages([]);
+    setMessages?.([]);
     setShowFullChat(false);
   };
 
   const handleReloadMessages = () => {
-    if (messages.length > 0) {
-      const lastMessageId = (visibleMessages[visibleMessages.length - 1] as any)?.id;
+    if (messages.length > 0 && safeVisibleMessages.length > 0) {
+      const lastMessageId = (safeVisibleMessages[safeVisibleMessages.length - 1] as any)?.id;
       if (lastMessageId) {
-        reloadMessages(lastMessageId);
+        reloadMessages?.(lastMessageId);
       }
     }
     setShowFullChat(false);
