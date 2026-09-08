@@ -25,11 +25,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Study material is required' }, { status: 400 })
     }
 
-    if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
+    if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         {
           error: 'LLM 未配置',
-          details: '请在 .env.local 配置 LLM_API_KEY 或 GROQ_API_KEY，然后重启 dev 服务器。',
+          details: '请在 .env.local 配置 LLM_API_KEY 或 OPENAI_API_KEY（推荐 Vercel AI Gateway vck_ 开头密钥），然后重启 dev 服务器。',
           baseURL: LLM_BASE_URL_USED,
         },
         { status: 503 },
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function generateAIQuestions(request: QuizGenerationRequest): Promise<Question[]> {
-  if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
+  if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY) {
     throw new Error('LLM client not available')
   }
 

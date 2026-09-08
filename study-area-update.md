@@ -1,8 +1,8 @@
-## Study Area Schema Update
+## 学习区架构更新
 
-This update introduces a new table, `focus_sessions`, to store data from the Study Area feature.
+本次更新引入了一个新表 `focus_sessions`，用于存储学习区功能的数据。
 
-### SQL Statement
+### SQL 语句
 
 ```sql
 CREATE TABLE focus_sessions (
@@ -16,6 +16,6 @@ CREATE TABLE focus_sessions (
 );
 ```
 
-### Instructions
+### 操作说明
 
-To apply this update, execute the SQL statement above against your SQLite database. This will create the new `focus_sessions` table, enabling the Study Area feature to store session data.
+要应用此更新，请对您的 SQLite 数据库执行上述 SQL 语句。这将创建新的 `focus_sessions` 表，使学习区功能能够存储会话数据。

@@ -1,27 +1,19 @@
-import Groq from "groq-sdk";
-
 /**
- * 统一 LLM 调用层（自定义 BaseURL 用原生 Fetch，Groq 官方直连用 SDK）
+ * 统一 LLM 调用层（通过 Vercel AI Gateway，使用原生 Fetch）
  *
- * 关键修复：
- * - groq-sdk 即使给自定义 baseURL，内部也会强制加 /openai/v1 前缀，
- *   导致 Vercel AI Gateway / 自建 OpenAI 中转的路径拼错（出现 /v1/openai/v1/... 双层 /v1）。
- * - 自定义 BaseURL 的场景我们直接用原生 fetch，最终请求 URL 是:
- *     `${NORMALIZED_BASE_URL}/chat/completions`
- *   即：用户在 LLM_BASE_URL 里写什么前缀，我们就用什么（不额外拼接），完全可控。
- * - Groq 官方直连（LLM_BASE_URL 为空）的场景仍然走 SDK，以获得更好的错误处理/流式封装。
+ * 设计说明：
+ * - 统一使用原生 fetch 调用 OpenAI 兼容协议，确保路径精确控制。
+ * - LLM_BASE_URL 里写什么前缀，我们就用什么（不额外拼接），完全可控。
+ * - 所有场景都走统一的 runChatCompletionJSON / runChatCompletionStream 接口。
  */
 
 // ============ 环境变量解析 ============
 const RAW_BASE_URL = process.env.LLM_BASE_URL || process.env.OPENAI_BASE_URL || "";
-const GROQ_OFFICIAL_BASE = "https://api.groq.com/openai/v1";
-
-const USING_CUSTOM_BASE = !!RAW_BASE_URL;
+const VERCEL_AI_GATEWAY_BASE = "https://ai-gateway.vercel.sh/v1";
 
 function normalizeBaseURL(raw: string): string {
   let url = raw.trim();
   if (!url) return "";
-  // 去掉用户可能多余地包的引号/反引号（避免 .env.local 手滑写错）
   if (
     (url.startsWith('"') && url.endsWith('"')) ||
     (url.startsWith("'") && url.endsWith("'")) ||
@@ -29,20 +21,13 @@ function normalizeBaseURL(raw: string): string {
   ) {
     url = url.slice(1, -1).trim();
   }
-  // 去掉末尾斜杠，统一后续 /chat/completions 拼接
   return url.replace(/\/+$/, "");
 }
 
-/** 最终使用的 Base URL（不含 /chat/completions 后缀） */
-export const LLM_BASE_URL_USED = USING_CUSTOM_BASE
-  ? normalizeBaseURL(RAW_BASE_URL)
-  : GROQ_OFFICIAL_BASE;
+const NORMALIZED_BASE = normalizeBaseURL(RAW_BASE_URL);
+export const LLM_BASE_URL_USED = NORMALIZED_BASE || VERCEL_AI_GATEWAY_BASE;
 
-// 找到合适的 API Key：自定义 Base 先看 LLM/OPENAI 前缀，Groq 官方看 GROQ_API_KEY
 let API_KEY = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || "";
-if (!USING_CUSTOM_BASE && !API_KEY) {
-  API_KEY = process.env.GROQ_API_KEY || "";
-}
 if (
   (API_KEY.startsWith('"') && API_KEY.endsWith('"')) ||
   (API_KEY.startsWith("'") && API_KEY.endsWith("'")) ||
@@ -52,21 +37,16 @@ if (
 }
 export const LLM_API_KEY_SET = !!API_KEY;
 
-// ============ Groq 官方直连 SDK（仅 LLM_BASE_URL 为空时启用） ============
-function createGroqSdkClient(): Groq | null {
-  if (USING_CUSTOM_BASE || !API_KEY) return null;
-  return new Groq({ apiKey: API_KEY, baseURL: GROQ_OFFICIAL_BASE });
-}
-/** 旧接口兼容导出（仅 Groq 官方才非 null；自定义 Base 场景请用下面 run* 函数） */
-export const llmClient: Groq | null = createGroqSdkClient();
+// ============ 旧接口兼容（现在永远为 null，保留仅避免 import 报错） ============
+export const llmClient: null = null;
 
 // ============ 模型名（Vercel Gateway 必须是 provider:model 格式） ============
 export const LLM_MODELS = {
-  chat: process.env.LLM_MODEL_CHAT || process.env.OPENAI_MODEL || "groq:llama-3.1-8b-instant",
-  fast: process.env.LLM_MODEL_FAST || "groq:llama-3.1-8b-instant",
-  smart: process.env.LLM_MODEL_SMART || "groq:llama-3.3-70b-versatile",
-  flowchart: process.env.LLM_MODEL_FLOWCHART || "groq:gemma2-9b-it",
-  quiz: process.env.LLM_MODEL_QUIZ || "groq:llama3-8b-8192",
+  chat: process.env.LLM_MODEL_CHAT || process.env.OPENAI_MODEL || "openai:gpt-4o-mini",
+  fast: process.env.LLM_MODEL_FAST || "openai:gpt-4o-mini",
+  smart: process.env.LLM_MODEL_SMART || "openai:gpt-3.5-turbo",
+  flowchart: process.env.LLM_MODEL_FLOWCHART || "openai:gpt-4o-mini",
+  quiz: process.env.LLM_MODEL_QUIZ || "openai:gpt-3.5-turbo",
 } as const;
 
 // ============ 共享类型 ============
@@ -96,25 +76,13 @@ export async function runChatCompletionJSON(
 ): Promise<{ content: string }> {
   if (!LLM_API_KEY_SET) {
     const err: LLMError = new Error(
-      "未配置 API Key（LLM_API_KEY / OPENAI_API_KEY / GROQ_API_KEY 至少填一个）。" +
+      "未配置 API Key（需要 LLM_API_KEY 或 OPENAI_API_KEY，推荐使用 Vercel AI Gateway 的 vck_ 开头密钥）。" +
         `当前 BaseURL=${LLM_BASE_URL_USED}`,
     );
     err.status = 503;
     throw err;
   }
 
-  // Groq 官方直连分支：直接 SDK
-  if (!USING_CUSTOM_BASE && llmClient) {
-    const { stream: _s, ...rest } = params;
-    const completion = await llmClient.chat.completions.create({
-      ...rest,
-      stream: false,
-    } as any);
-    const content = completion.choices?.[0]?.message?.content ?? "";
-    return { content };
-  }
-
-  // 自定义 Base 分支：原生 fetch
   const url = `${LLM_BASE_URL_USED}/chat/completions`;
   const bodyObj: Record<string, unknown> = {
     model: params.model,
@@ -201,7 +169,6 @@ function parseSSELinesIntoDeltas(rawChunk: string): { leftover: string; deltas: 
 
 /**
  * 调用 LLM 流式接口，通过回调逐步推送 token。
- * （相比自己处理 fetch stream，所有场景都走同一个函数，避免 bug 分散。）
  */
 export async function runChatCompletionStream(
   params: ChatCompletionParams,
@@ -214,7 +181,7 @@ export async function runChatCompletionStream(
 ): Promise<void> {
   if (!LLM_API_KEY_SET) {
     const err: LLMError = new Error(
-      "未配置 API Key（LLM_API_KEY / OPENAI_API_KEY / GROQ_API_KEY 至少填一个）。" +
+      "未配置 API Key（需要 LLM_API_KEY 或 OPENAI_API_KEY，推荐使用 Vercel AI Gateway 的 vck_ 开头密钥）。" +
         `当前 BaseURL=${LLM_BASE_URL_USED}`,
     );
     err.status = 503;
@@ -222,35 +189,6 @@ export async function runChatCompletionStream(
     return;
   }
 
-  // 1) Groq 官方直连分支：SDK 原生 for-await
-  if (!USING_CUSTOM_BASE && llmClient) {
-    try {
-      const streamRes = await llmClient.chat.completions.create({
-        messages: params.messages,
-        model: params.model,
-        temperature: params.temperature ?? 0.7,
-        max_tokens: params.max_tokens ?? 2048,
-        stream: true,
-      } as any);
-      let full = "";
-      for await (const part of streamRes as any) {
-        if (handlers.signal?.aborted) break;
-        const delta: string = part?.choices?.[0]?.delta?.content ?? "";
-        if (delta) {
-          full += delta;
-          await handlers.onToken(delta);
-        }
-      }
-      await handlers.onDone(full);
-    } catch (e: any) {
-      const err: LLMError = e;
-      if (!err.status) err.status = e?.status || 500;
-      await handlers.onError(err);
-    }
-    return;
-  }
-
-  // 2) 自定义 Base 分支：原生 fetch + ReadableStream 逐行解析
   const url = `${LLM_BASE_URL_USED}/chat/completions`;
   const bodyObj: Record<string, unknown> = {
     model: params.model,
@@ -327,7 +265,6 @@ export async function runChatCompletionStream(
       }
       if (parsed.done) break;
     }
-    // flush 最后一段 buffer
     if (buffer) {
       const parsed = parseSSELinesIntoDeltas(buffer + "\n\n");
       for (const delta of parsed.deltas) {
@@ -357,12 +294,12 @@ export async function runChatCompletionStream(
 if (typeof window === "undefined") {
   if (!LLM_API_KEY_SET) {
     console.warn(
-      "[llm] ⚠️ 未配置 API Key（需要 LLM_API_KEY/GROQ_API_KEY 至少一个）。" +
-        `BaseURL=${LLM_BASE_URL_USED}，自定义 Base=${USING_CUSTOM_BASE}`,
+      "[llm] ⚠️ 未配置 API Key（需要 LLM_API_KEY / OPENAI_API_KEY，推荐 Vercel AI Gateway vck_ 开头密钥）。" +
+        `BaseURL=${LLM_BASE_URL_USED}`,
     );
   } else {
     console.info(
-      `[llm] ✅ 已初始化。BaseURL=${LLM_BASE_URL_USED}，自定义 Base=${USING_CUSTOM_BASE}，` +
+      `[llm] ✅ 已初始化。BaseURL=${LLM_BASE_URL_USED}，` +
         `chat 模型=${LLM_MODELS.chat}，smart 模型=${LLM_MODELS.smart}`,
     );
   }

@@ -2,7 +2,7 @@
 
 > 文档分两部分：
 > 1. **聊天部分（主路径 / 推荐日常使用）**：`/dashboard/chat` 页面 + `/api/chat/completion` 流式接口
-> 2. **CopilotKit 部分（备用 / 底层 Agent 能力）**：`/api/copilotkit` 端点 + 握手探测 + GroqAdapter / OpenAIAdapter
+> 2. **CopilotKit 部分（备用 / 底层 Agent 能力）**：`/api/copilotkit` 端点 + 握手探测 + OpenAIAdapter
 
 相关文件索引：
 - 聊天前端：[dashboard/chat/page.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/chat/page.tsx)
@@ -10,8 +10,8 @@
 - 聊天历史 CRUD：[api/chats/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/chats/route.ts)
 - 统一 LLM 调用层：[lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts)
 - CopilotKit 运行时：[api/copilotkit/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts)
-- CopilotKit 握手 stub：[api/copilotkit/info/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/info/route.ts)
-- Dashboard Provider（当前禁用了 CopilotKit）：[dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx)
+- 握手端点：由 [api/copilotkit/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts)（Hono single-route）自动处理 `/info`，已删除独立 info stub 文件
+- Dashboard Provider（当前已启用）：[dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx) — useSingleEndpoint=true + agents__unsafe_dev_only 注册 HttpAgent(keys=[default]) + CopilotPopup 悬浮气泡
 - 环境变量示例：[.env.local](file:///d:/GITHUB_tmp/study-sphere/.env.local) / [.env.local.example](file:///d:/GITHUB_tmp/study-sphere/.env.local.example)
 
 ---
@@ -25,25 +25,22 @@
 ```env
 # 1) 自定义 Base（本项目走 Vercel AI Gateway，推荐）
 LLM_BASE_URL=https://ai-gateway.vercel.sh/v1
-LLM_API_KEY=vck_XXXXXXXXXXXXXXXXXXXXXXXXXX         # Vercel AI Gateway Key
+LLM_API_KEY=vck_XXXXXXXXXXXXXXXXXXXXXXXXXX         # Vercel AI Gateway Key（vck_ 开头）
+OPENAI_API_KEY=vck_XXXXXXXXXXXXXXXXXXXXXXXXXX      # 同上，兼容别名
 
-# 模型名：Vercel Gateway 必须是 provider:model，Groq 免费额度如下
-LLM_MODEL_CHAT=groq:llama-3.1-8b-instant
-LLM_MODEL_FAST=groq:llama-3.1-8b-instant
-LLM_MODEL_SMART=groq:llama-3.3-70b-versatile
-LLM_MODEL_FLOWCHART=groq:gemma2-9b-it
-LLM_MODEL_QUIZ=groq:llama3-8b-8192
-
-# 2) 如果想直连 Groq 官方（不经过 Vercel），改为：
-# LLM_BASE_URL=
-# GROQ_API_KEY=gsk_XXXXXXXXXXXXXXXXXXXX
+# 模型名：Vercel Gateway 必须是 provider:model，推荐模型如下
+LLM_MODEL_CHAT=openai:gpt-4o-mini
+LLM_MODEL_FAST=openai:gpt-4o-mini
+LLM_MODEL_SMART=openai:gpt-3.5-turbo
+LLM_MODEL_FLOWCHART=openai:gpt-4o-mini
+LLM_MODEL_QUIZ=openai:gpt-3.5-turbo
 ```
 
 启动后在 **Node 终端** 观察这一行：
 
 ```
 [llm] ✅ 已初始化。BaseURL=https://ai-gateway.vercel.sh/v1，自定义 Base=true，
-      chat 模型=groq:llama-3.1-8b-instant，smart 模型=groq:llama-3.3-70b-versatile
+      chat 模型=openai:gpt-4o-mini，smart 模型=openai:gpt-3.5-turbo
 ```
 
 如果看到的是 `⚠️ 未配置 API Key` → 重新检查 `.env.local` 是否保存、并重启 `npm run dev`（改 `.env.local` 必须重启）。
@@ -103,7 +100,7 @@ Invoke-RestMethod -Method Post `
 ```json
 {
   "content": "1. 先读题目再看文章；2. 记每段主旨句；3. 陌生词先结合上下文猜、再查词典……",
-  "model": "groq:llama-3.1-8b-instant",
+  "model": "openai:gpt-4o-mini",
   "elapsedMs": 3820,
   "baseURL": "https://ai-gateway.vercel.sh/v1"
 }
@@ -114,9 +111,9 @@ Invoke-RestMethod -Method Post `
 | 错误场景 | 典型 status / message | 排查建议 |
 |---------|----------------------|---------|
 | Token 错 / 过期 | 401 `Invalid authentication token` | 去 Vercel → Dashboard → AI → AI Gateway → Keys 重新生成一个 `vck_` 开头的 key（注意不是 Vercel 个人 Account Token） |
-| 模型名错 | 404 `The requested resource was not found: /v1/chat/completions` 或 `model not found` | 必须 `provider:model`，例如 `groq:llama-3.1-8b-instant`，纯模型名 `gpt-4o-mini` 不认识 |
-| 速率限制 | 429 `Rate limited` / `You exceeded your current quota` | 等 1 分钟再试，或升级 Vercel/Groq 额度 |
-| Provider Billing 未绑 | 如 `openai provider is not configured` | `openai:*` / `anthropic:*` 都需要 Vercel AI Gateway 后台绑定对应 Provider 的 Billing；Groq 免费用 `groq:*` |
+| 模型名错 | 404 `The requested resource was not found: /v1/chat/completions` 或 `model not found` | 必须 `provider:model`，例如 `openai:gpt-4o-mini`，纯模型名 `gpt-4o-mini` 不认识 |
+| 速率限制 | 429 `Rate limited` / `You exceeded your current quota` | 等 1 分钟再试，或升级 Vercel 额度 |
+| Provider Billing 未绑 | 如 `openai provider is not configured` | `openai:*` / `anthropic:*` 都需要 Vercel AI Gateway 后台绑定对应 Provider 的 Billing |
 | 自定义 Base 路径拼错（修过的 bug） | 旧错误：`/v1/openai/v1/chat/completions 404` | 用新版本的 [lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts) 自定义 Base 原生 fetch 分支，不会再加 `/openai/v1` |
 
 #### 样例 B：流式 SSE（打字机效果）
@@ -145,7 +142,7 @@ data: {"type":"delta","delta":"2"}
 
 data: {"type":"delta","delta":"。"}
 
-data: {"type":"done","model":"groq:llama-3.1-8b-instant","elapsedMs":820,"finalContent":"2。"}
+data: {"type":"done","model":"openai:gpt-4o-mini","elapsedMs":820,"finalContent":"2。"}
 ```
 
 错误时会推 `type=error`：
@@ -175,11 +172,11 @@ data: {"type":"error","name":"HTTPError","message":"Invalid authentication token
 
 ## 二、CopilotKit 部分（备用 / 底层 Agent）
 
-> ⚠️ 说明：主聊天（/dashboard/chat）**已经不再走 CopilotKit**，它直接调用 `/api/chat/completion`。
-> CopilotKit 目前只在以下场景保留：
-> - 将来要使用 CopilotKit `actionCategories` / `@copilotkit/react-ui` 的侧边栏 chat bubble（CopilotPopup）。
-> - 闪卡 AI 生成接口 `/api/copilotkit/generate-flashcards` 仍在此目录下（但它现在只复用 LLM 层，不通过 CopilotRuntime）。
-> - 握手探测 stub `/api/copilotkit/info` 保留用于消除误报。
+> ⚠️ 说明：主聊天（/dashboard/chat）**仍然不走 CopilotKit**，它直接调用 /api/chat/completion。
+> CopilotKit 目前使用场景：
+> - 右下角悬浮气泡 CopilotPopup（通过 CopilotKit Provider + useSingleEndpoint + 注册 @ag-ui/client HttpAgent）。
+> - 闪卡 AI 生成接口 /api/copilotkit/generate-flashcards 仍在此目录下（但它现在只复用 LLM 层，不通过 CopilotRuntime）。
+> - 握手探测 GET /api/copilotkit/info 已由 single-route 自动托管，**不再需要独立 info stub 文件**（已删除），也不会再 404 刷屏。
 
 ### 2.1 架构关系图
 
@@ -194,46 +191,30 @@ data: {"type":"error","name":"HTTPError","message":"Invalid authentication token
                │  POST /api/chat/completion  │  POST /api/copilotkit
                ▼                             ▼
      聊天后端 (route.ts)              CopilotRuntime
-     调用 runChatCompletionStream      GroqAdapter / OpenAIAdapter
+     调用 runChatCompletionStream      OpenAIAdapter
                │                             │
                └──────────────┬──────────────┘
                               ▼
                     统一 LLM 层 (lib/llm.ts)
-                    自定义 Base → 原生 fetch
-                    Groq 官方   → Groq SDK
+                    自定义 Base (Vercel AI Gateway) → 原生 fetch
+                    OpenAI 兼容协议
                               │
                               ▼
-               Vercel AI Gateway / Groq / OpenAI 兼容后端
+               Vercel AI Gateway / OpenAI 兼容后端
 ```
 
-### 2.2 启用 CopilotKit Provider（备用，想恢复 CopilotPopup 时用）
+### 2.2 当前 CopilotKit Provider 配置（已启用）
+Provider 已在 [dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L30-L36) 配置完成并启用，关键 props 如下：
+- `useSingleEndpoint={true}`：CopilotKit v1.9+ 修复 Agent 'default' not found 必须项（告诉前端只走单一后端端点，不再额外请求 runtime 元信息）。
+- `agents__unsafe_dev_only={{ default: new HttpAgent({ description, url: "/api/copilotkit" }) }}`：通过 @ag-ui/client 的 HttpAgent 显式注册 agent key=`default`，name 不需要在构造参数里传（key 就是 agent name）。
+- 组件：<CopilotPopup defaultOpen={false} labels={{ title, initial, placeholder }} clickOutsideToClose={true} />
+- 如需关闭气泡：删除 layout.tsx 里 <CopilotPopup/> 这一行即可（Provider 保留不影响性能）。
 
-当前 Provider 已经在 [dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L11-L23) 注释掉。恢复方式：
-
-```diff
-- // import { CopilotKit } from "@copilotkit/react-core"
-- // import { CopilotPopup } from "@copilotkit/react-ui"
-- // import "@copilotkit/react-ui/styles.css"
-+ import { CopilotKit } from "@copilotkit/react-core"
-+ import { CopilotPopup } from "@copilotkit/react-ui"
-+ import "@copilotkit/react-ui/styles.css"
-
-  return (
--   <FlashcardsProvider>...</FlashcardsProvider>
-+   <CopilotKit runtimeUrl="/api/copilotkit">
-+     <FlashcardsProvider>
-        ...
--       </div>
-+         <CopilotPopup />
-+       </div>
-+     </FlashcardsProvider>
-+   </CopilotKit>
-  )
-```
-
-恢复后每次进 dashboard 任一页面，都会发 **`GET /api/copilotkit/info`**（握手探测）和 **`POST /api/copilotkit`**（发消息）。
+每次进 dashboard 任一页面，会自动走 single-route 模式：**不再单独发 GET /api/copilotkit/info**（由后端 single-route 内自动处理），发送消息走 POST /api/copilotkit（Hono 托管）。
 
 ### 2.3 测握手探测（`GET /api/copilotkit/info`）
+
+> ℹ️ 自切换到 Hono single-route 模式后，/info 端点已与 POST /api/copilotkit 合并在同一 Route Handler 文件（api/copilotkit/route.ts）内自动托管，**不再有独立的 src/app/api/copilotkit/info/route.ts 文件**（已删除）。如果你本地还看到 404，请先执行 npm run clean 清 .next 缓存并重启。
 
 ```bash
 curl.exe http://localhost:3000/api/copilotkit/info
@@ -262,7 +243,7 @@ curl.exe http://localhost:3000/api/copilotkit/info
 
 1. 发送消息后 Node 先打：
    ```
-   [CopilotKit OpenAIAdapter(Vercel-Gateway)] process start userMessages=1 model=groq:llama-3.1-8b-instant baseURL=https://ai-gateway.vercel.sh/v1
+   [CopilotKit OpenAIAdapter(Vercel-Gateway)] process start userMessages=1 model=openai:gpt-4o-mini baseURL=https://ai-gateway.vercel.sh/v1
    ```
 2. 成功后打：
    ```
@@ -283,7 +264,7 @@ curl.exe http://localhost:3000/api/copilotkit/info
 
 **排错顺序：**
 1. `.env.local` 的 API Key 是否是 Vercel AI Gateway Key（`vck_` 开头），而不是个人 token。
-2. 模型名是否写成 `groq:...`；如果写 `gpt-4o-mini` 但没绑 OpenAI Billing，也会 Forbidden / model not found。
+2. 模型名是否写成 `openai:...`；如果写 `gpt-4o-mini` 但没绑 OpenAI Billing，也会 Forbidden / model not found。
 3. 用 1.4 节的 `/api/chat/completion` 非流式先把 Token / 模型名跑通。**只要 `/api/chat/completion` 能通，CopilotKit 调 LLM 就一定也能通**，因为它们共用同一层 `lib/llm.ts`（区别只在于 CopilotKit 的 OpenAIAdapter 目前仍用 SDK，出问题时建议直接复用聊天部分的 `runChatCompletionStream` 去改 `serviceAdapter.process`）。
 
 ### 2.5 CopilotKit 子目录下的 AI 工具端点（非流式）测试样例
@@ -360,7 +341,7 @@ Content-Type: application/json
 |--------|------|------------|
 | `.env.local` LLM_API_KEY 是否是 `vck_` 开头 | 是 | 肉眼 |
 | 5 个模型是否都写成 `provider:model` | 是 | `.env.local` 搜索 `:` 即可 |
-| `GET /api/copilotkit/info` 返回 200 JSON | 通过 | curl |
+| `GET /api/copilotkit/info` 返回 200 JSON（single-route 自动托管，无独立 stub 文件） | 通过 | curl |
 | `POST /api/chat/completion stream=false` 返回 200 + content 非空 | 通过 | 1.4 样例 A |
 | `/dashboard/chat` 空屏 UI 正常 | 通过 | 浏览器 |
 | `/dashboard/chat` 发消息能逐字渲染 | 通过 | 浏览器 + 看 Node elapsedMs |

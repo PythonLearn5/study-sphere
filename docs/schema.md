@@ -1,19 +1,19 @@
-# Database Schema
+# 数据库模式
 
-## 🗄️ Overview
+## 🗄️ 概述
 
-Study Sphere uses SQLite with Drizzle ORM for type-safe database operations.
+Study Sphere 使用 SQLite 配合 Drizzle ORM 进行类型安全的数据库操作。
 
-## 📊 Configuration
+## 📊 配置
 
-- **Database**: SQLite (`sqlite.db`)
-- **ORM**: Drizzle ORM with Better SQLite3
-- **Migrations**: Drizzle Kit
-- **Validation**: Zod schemas
+- **数据库**：SQLite（`sqlite.db`）
+- **ORM**：Drizzle ORM 配合 Better SQLite3
+- **迁移**：Drizzle Kit
+- **验证**：Zod 模式
 
-## 📋 Core Tables
+## 📋 核心表
 
-### Users Table
+### 用户表
 ```typescript
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -25,9 +25,9 @@ export const users = sqliteTable('users', {
 });
 ```
 
-**Purpose**: User authentication and profiles
+**用途**：用户认证和个人资料
 
-### Notes Table
+### 笔记表
 ```typescript
 export const notes = sqliteTable('notes', {
   id: text('id').primaryKey(),
@@ -40,9 +40,9 @@ export const notes = sqliteTable('notes', {
 });
 ```
 
-**Purpose**: Rich text notes with categories
+**用途**：带分类的富文本笔记
 
-### Tasks Table
+### 任务表
 ```typescript
 export const tasks = sqliteTable('tasks', {
   id: text('id').primaryKey(),
@@ -57,9 +57,9 @@ export const tasks = sqliteTable('tasks', {
 });
 ```
 
-**Purpose**: Task management with priorities and status
+**用途**：带优先级和状态的任务管理
 
-### Chats Table
+### 对话表
 ```typescript
 export const chats = sqliteTable('chats', {
   id: text('id').primaryKey(),
@@ -70,9 +70,9 @@ export const chats = sqliteTable('chats', {
 });
 ```
 
-**Purpose**: AI chat history
+**用途**：AI 对话历史
 
-### Daily Reviews Table
+### 每日回顾表
 ```typescript
 export const dailyReviews = sqliteTable('daily_reviews', {
   id: text('id').primaryKey(),
@@ -87,9 +87,9 @@ export const dailyReviews = sqliteTable('daily_reviews', {
 });
 ```
 
-**Purpose**: Daily productivity tracking
+**用途**：每日生产力追踪
 
-### User Settings Table
+### 用户设置表
 ```typescript
 export const userSettings = sqliteTable('user_settings', {
   id: text('id').primaryKey(),
@@ -108,34 +108,34 @@ export const userSettings = sqliteTable('user_settings', {
 });
 ```
 
-**Purpose**: User productivity preferences
+**用途**：用户生产力偏好
 
-## 🔗 Relationships
+## 🔗 关系
 
-- All tables reference `users.id` with cascade delete
-- Foreign key constraints ensure data integrity
-- Timestamps track creation and modification
-- JSON fields for flexible data storage (categories)
+- 所有表通过级联删除引用 `users.id`
+- 外键约束确保数据完整性
+- 时间戳追踪创建和修改
+- JSON 字段用于灵活数据存储（分类）
 
-## 🛠️ Migration Commands
+## 🛠️ 迁移命令
 
 ```bash
-# Generate migrations
+# 生成迁移
 bun run db:generate
 
-# Apply migrations
+# 应用迁移
 bun run db:migrate
 
-# Push schema changes
+# 推送模式变更
 bun run db:push
 
-# Open database studio
+# 打开数据库管理界面
 bun run db:studio
 ```
 
-## 🔍 Query Examples
+## 🔍 查询示例
 
-### Get User Notes
+### 获取用户笔记
 ```typescript
 const userNotes = await db
   .select()
@@ -143,7 +143,7 @@ const userNotes = await db
   .where(eq(notes.userId, userId));
 ```
 
-### Create Task
+### 创建任务
 ```typescript
 const newTask = await db
   .insert(tasks)
@@ -159,7 +159,7 @@ const newTask = await db
   });
 ```
 
-### Get Chat History
+### 获取对话历史
 ```typescript
 const chatHistory = await db
   .select()

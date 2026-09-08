@@ -1,80 +1,81 @@
-# Quiz System Setup Guide
+# 测验系统设置指南
 
-## API Key Configuration
+## API 密钥配置
 
-To enable AI-powered quiz generation, you need to set up a Groq API key:
+要启用 AI 驱动的测验生成功能，您需要设置 Vercel AI Gateway API 密钥（OpenAI 兼容协议）：
 
-1. **Get a Groq API Key:**
-   - Go to https://console.groq.com/keys
-   - Sign up or log in to your account
-   - Create a new API key
+1. **获取 Vercel AI Gateway API 密钥：**
+   - 前往 Vercel Dashboard → AI → AI Gateway → Keys
+   - 注册或登录您的 Vercel 账户
+   - 创建一个新的 API 密钥（应以 `vck_` 开头）
 
-2. **Add the API Key to Environment:**
-   - Create a `.env.local` file in the root directory
-   - Add your API key:
+2. **将 API 密钥添加到环境中：**
+   - 在根目录中创建 `.env.local` 文件
+   - 添加您的 API 密钥：
    ```
-   GROQ_API_KEY=your_actual_api_key_here
+   LLM_API_KEY=your_actual_vck_api_key_here
+   OPENAI_API_KEY=your_actual_vck_api_key_here
    ```
 
-3. **Restart the Development Server:**
+3. **重启开发服务器：**
    ```bash
    npm run dev
    ```
 
-## Features
+## 功能
 
-### ✅ Subject-wise Organization
-- Quizzes are organized by subjects (Math, Science, History, Language, Computer Science)
-- Each subject has multiple topics
-- Filter quizzes by subject and topic
+### ✅ 按学科组织
+- 测验按学科组织（数学、科学、历史、语言、计算机科学）
+- 每个学科包含多个主题
+- 可按学科和主题筛选测验
 
-### ✅ Difficulty Levels
-- **Beginner (🌱)**: Basic concepts and fundamentals
-- **Intermediate (🎯)**: Moderate complexity
-- **Advanced (🧠)**: Complex topics and advanced concepts
+### ✅ 难度等级
+- **入门（🌱）**：基础概念和基本原理
+- **中级（🎯）**：中等复杂度
+- **高级（🧠）**：复杂主题和进阶概念
 
-### ✅ Bookmark System
-- Click the bookmark icon to save quizzes for later
-- Filter to show only bookmarked quizzes
-- Bookmarks persist across sessions
+### ✅ 书签系统
+- 点击书签图标保存测验以便稍后查看
+- 筛选仅显示已加书签的测验
+- 书签在会话间持久保存
 
-### ✅ Completion Tracking
-- Track your quiz completion status
-- View scores and percentages
-- Filter to show completed quizzes
+### ✅ 完成情况追踪
+- 追踪您的测验完成状态
+- 查看分数和正确率
+- 筛选显示已完成的测验
 
-### ✅ AI Quiz Generation
-- Generate quizzes from your study material
-- AI analyzes your content and creates relevant questions
-- Fallback to sample questions if AI is unavailable
+### ✅ AI 测验生成
+- 从您的学习材料中生成测验
+- AI 分析您的内容并创建相关问题
+- 如果 AI 不可用，回退到示例问题
 
-## Sample Quizzes
+## 示例测验
 
-The system includes sample quizzes to get you started:
-- **Basic Algebra Quiz** (Beginner level)
-- **Physics Fundamentals** (Intermediate level)
+系统包含示例测验帮助您快速上手：
+- **基础代数测验**（入门级别）
+- **物理基础**（中级级别）
 
-## Data Persistence
+## 数据持久化
 
-- Quizzes are saved to localStorage
-- Bookmarks and completion status persist
-- Data survives page refreshes and browser restarts
+- 测验保存至 localStorage
+- 书签和完成状态持久保存
+- 数据在页面刷新和浏览器重启后仍然保留
 
-## Troubleshooting
+## 故障排除
 
-### API Key Issues
-If you see "Invalid API Key" errors:
-1. Check that your `.env.local` file exists
-2. Verify the API key is correct
-3. Restart the development server
+### API 密钥问题
+如果您看到"无效 API 密钥"错误：
+1. 检查 `.env.local` 文件是否存在
+2. 验证 API 密钥是否正确
+3. 重启开发服务器
 
-### Quiz Generation Issues
-If AI generation fails:
-- The system will fall back to sample questions based on your study material
-- Check the console for detailed error messages
+### 测验生成问题
+如果 AI 生成失败：
+- 系统将根据您的学习材料回退到示例问题
+- 查看控制台获取详细错误信息
 
-### Data Loss
-If quizzes disappear:
-- Check browser localStorage settings
-- Ensure you're not in incognito/private mode
-- Try refreshing the page 
+### 数据丢失
+如果测验消失：
+- 检查浏览器 localStorage 设置
+- 确保您未处于无痕/隐私模式
+- 尝试刷新页面

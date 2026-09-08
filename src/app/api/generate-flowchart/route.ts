@@ -8,9 +8,9 @@ interface FlowchartGenerationRequest {
 }
 
 async function generateMermaidWithAI(concept: string, chartType: string, complexity: string): Promise<string> {
-  if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
+  if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY) {
     throw new Error(
-      'LLM client 未初始化：请配置 LLM_API_KEY 或 GROQ_API_KEY。' +
+      'LLM client 未初始化：请配置 LLM_API_KEY 或 OPENAI_API_KEY（推荐 Vercel AI Gateway vck_ 开头密钥）。' +
         `当前 BaseURL=${LLM_BASE_URL_USED}，model=${LLM_MODELS.flowchart}`,
     )
   }

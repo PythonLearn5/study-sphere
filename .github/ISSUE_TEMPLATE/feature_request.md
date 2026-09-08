@@ -1,20 +1,20 @@
 ---
-name: Feature request
-about: Suggest a feature for Study Sphere
+name: 功能建议
+about: 为 Study Sphere 建议一个新功能
 title: '💡: '
 labels: 'enhancement'
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**您的功能建议是否与某个问题相关？请描述。**
+请清晰简洁地描述问题是什么。例如：我总是感到沮丧，当 [...]
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**描述您希望的解决方案**
+请清晰简洁地描述您期望实现的效果。
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+**描述您考虑过的替代方案**
+请清晰简洁地描述您考虑过的任何其他解决方案或功能。
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+**补充信息**
+在此处添加与该功能建议相关的其他背景或截图。

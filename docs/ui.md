@@ -1,43 +1,43 @@
-# UI Components
+# UI 组件
 
-## 🎨 Design System
+## 🎨 设计系统
 
-Study Sphere uses Tailwind CSS and Radix UI primitives for consistent, accessible components.
+Study Sphere 使用 Tailwind CSS 和 Radix UI 原语来构建一致、可访问的组件。
 
-## 🏗️ Component Structure
+## 🏗️ 组件结构
 
 ```
-src/components/ui/       # Base UI components
-├── button.tsx          # Button variants
-├── card.tsx           # Container components
-├── dialog.tsx         # Modal dialogs
-├── input.tsx          # Form inputs
-├── textarea.tsx       # Text areas
-├── select.tsx         # Dropdown selects
-├── checkbox.tsx       # Checkboxes
-├── switch.tsx         # Toggle switches
-├── badge.tsx          # Status badges
-├── progress.tsx       # Progress bars
-├── flashcard.tsx      # Custom flashcard component
-└── ...               # Other UI primitives
+src/components/ui/       # 基础 UI 组件
+├── button.tsx          # 按钮变体
+├── card.tsx           # 容器组件
+├── dialog.tsx         # 模态对话框
+├── input.tsx          # 表单输入
+├── textarea.tsx       # 文本域
+├── select.tsx         # 下拉选择
+├── checkbox.tsx       # 复选框
+├── switch.tsx         # 切换开关
+├── badge.tsx          # 状态徽章
+├── progress.tsx       # 进度条
+├── flashcard.tsx      # 自定义抽认卡组件
+└── ...               # 其他 UI 原语
 ```
 
-## 🎯 Design Tokens
+## 🎯 设计令牌
 
-### Colors
-- **Primary**: Dark text and buttons
-- **Secondary**: Light backgrounds
-- **Muted**: Subtle backgrounds
-- **Accent**: Highlighted elements
-- **Destructive**: Error states
+### 颜色
+- **主色**：深色文本和按钮
+- **辅色**：浅色背景
+- **柔和色**：细微背景
+- **强调色**：高亮元素
+- **破坏色**：错误状态
 
-### Typography
-- **Sans**: Geist Sans (primary font)
-- **Mono**: Geist Mono (code font)
+### 排版
+- **Sans**：Geist Sans（主字体）
+- **Mono**：Geist Mono（代码字体）
 
-## 🧩 Key Components
+## 🧩 关键组件
 
-### Button Component
+### 按钮组件
 ```typescript
 const buttonVariants = cva(
   "inline-flex items-center justify-center rounded-md text-sm font-medium",
@@ -62,7 +62,7 @@ const buttonVariants = cva(
 );
 ```
 
-### Card Component
+### 卡片组件
 ```typescript
 const Card = React.forwardRef<
   HTMLDivElement,
@@ -79,15 +79,15 @@ const Card = React.forwardRef<
 ));
 ```
 
-## 🎨 Theme Support
+## 🎨 主题支持
 
-### Dark/Light Mode
-- System preference detection
-- Manual theme switching
-- Consistent color schemes
-- Accessible contrast ratios
+### 深色/浅色模式
+- 系统偏好检测
+- 手动主题切换
+- 一致的配色方案
+- 可访问的对比度比率
 
-### CSS Variables
+### CSS 变量
 ```css
 :root {
   --background: 0 0% 100%;
@@ -108,33 +108,33 @@ const Card = React.forwardRef<
 }
 ```
 
-## ♿ Accessibility Features
+## ♿ 可访问性功能
 
-### Accessibility Implementation Flow
+### 可访问性实现流程
 ```mermaid
 flowchart TD
-    A[Component Development] --> B[WCAG 2.1 AA Guidelines]
-    B --> C[Keyboard Navigation]
-    B --> D[Screen Reader Support]
-    B --> E[Color Contrast]
-    B --> F[Focus Management]
+    A[组件开发] --> B[WCAG 2.1 AA 指南]
+    B --> C[键盘导航]
+    B --> D[屏幕阅读器支持]
+    B --> E[颜色对比度]
+    B --> F[焦点管理]
     
-    C --> G[Tab Order]
-    C --> H[Keyboard Shortcuts]
-    C --> I[Enter/Space Actions]
+    C --> G[Tab 顺序]
+    C --> H[键盘快捷键]
+    C --> I[Enter/Space 操作]
     
-    D --> J[ARIA Labels]
-    D --> K[ARIA Descriptions]
-    D --> L[Semantic HTML]
+    D --> J[ARIA 标签]
+    D --> K[ARIA 描述]
+    D --> L[语义化 HTML]
     
-    E --> M[Contrast Ratio 4.5:1]
-    E --> N[Color Independence]
+    E --> M[对比度 4.5:1]
+    E --> N[颜色独立性]
     
-    F --> O[Focus Indicators]
-    F --> P[Focus Trapping]
-    F --> Q[Skip Links]
+    F --> O[焦点指示器]
+    F --> P[焦点陷阱]
+    F --> Q[跳转链接]
     
-    G --> R[Accessible Component]
+    G --> R[可访问组件]
     H --> R
     I --> R
     J --> R
@@ -147,215 +147,215 @@ flowchart TD
     Q --> R
 ```
 
-### Component Accessibility Flow
+### 组件可访问性流程
 ```mermaid
 flowchart TD
-    A[User Interaction] --> B{Input Method}
-    B -->|Mouse| C[Click Handler]
-    B -->|Keyboard| D[Key Handler]
-    B -->|Screen Reader| E[ARIA Announcements]
+    A[用户交互] --> B{输入方式}
+    B -->|鼠标| C[点击处理器]
+    B -->|键盘| D[按键处理器]
+    B -->|屏幕阅读器| E[ARIA 播报]
     
-    C --> F[Visual Feedback]
-    D --> G[Keyboard Navigation]
-    E --> H[Semantic Information]
+    C --> F[视觉反馈]
+    D --> G[键盘导航]
+    E --> H[语义信息]
     
-    F --> I[Focus Styles]
-    G --> J[Tab Management]
-    H --> K[Role Descriptions]
+    F --> I[焦点样式]
+    G --> J[Tab 管理]
+    H --> K[角色描述]
     
-    I --> L[Accessible Action]
+    I --> L[可访问操作]
     J --> L
     K --> L
     
-    L --> M[State Update]
-    M --> N[Screen Reader Notification]
+    L --> M[状态更新]
+    M --> N[屏幕阅读器通知]
 ```
 
-## 📱 Responsive Design
+## 📱 响应式设计
 
-- Mobile-first approach
-- Breakpoint system:
-  - `sm`: 640px
-  - `md`: 768px
-  - `lg`: 1024px
-  - `xl`: 1280px
-  - `2xl`: 1536px
+- 移动优先方法
+- 断点系统：
+  - `sm`：640px
+  - `md`：768px
+  - `lg`：1024px
+  - `xl`：1280px
+  - `2xl`：1536px
 
-## 🎯 Component Usage
+## 🎯 组件使用
 
-### Component Hierarchy Flow
+### 组件层次流程
 ```mermaid
 flowchart TD
-    A[App Layout] --> B[Theme Provider]
-    B --> C[Navigation Components]
-    B --> D[Page Components]
+    A[应用布局] --> B[主题提供器]
+    B --> C[导航组件]
+    B --> D[页面组件]
     
-    C --> E[Navbar]
-    C --> F[Theme Toggle]
+    C --> E[导航栏]
+    C --> F[主题切换]
     
-    D --> G[Auth Pages]
-    D --> H[Dashboard Pages]
+    D --> G[认证页面]
+    D --> H[仪表盘页面]
     
-    G --> I[Login Form]
-    G --> J[Register Form]
+    G --> I[登录表单]
+    G --> J[注册表单]
     
-    H --> K[Notes Page]
-    H --> L[Flashcards Page]
-    H --> M[Chat Page]
-    H --> N[Tasks Page]
+    H --> K[笔记页面]
+    H --> L[抽认卡页面]
+    H --> M[对话页面]
+    H --> N[任务页面]
     
-    K --> O[Notes Grid]
-    O --> P[Note Card]
-    P --> Q[Button, Input, Textarea]
+    K --> O[笔记网格]
+    O --> P[笔记卡片]
+    P --> Q[按钮、输入、文本域]
     
-    L --> R[Flashcard Component]
-    R --> S[Card, Button, Badge]
+    L --> R[抽认卡组件]
+    R --> S[卡片、按钮、徽章]
     
-    M --> T[Chat Interface]
-    T --> U[Message List, Input, Button]
+    M --> T[对话界面]
+    T --> U[消息列表、输入、按钮]
     
-    N --> V[Task List]
-    V --> W[Task Item]
-    W --> X[Checkbox, Badge, Button]
+    N --> V[任务列表]
+    V --> W[任务项]
+    W --> X[复选框、徽章、按钮]
 ```
 
-### Form Components Flow
+### 表单组件流程
 ```mermaid
 flowchart TD
-    A[Form Container] --> B[Form Fields]
-    B --> C[Input Components]
-    B --> D[Selection Components]
-    B --> E[Action Components]
+    A[表单容器] --> B[表单字段]
+    B --> C[输入组件]
+    B --> D[选择组件]
+    B --> E[操作组件]
     
-    C --> F[Input]
-    C --> G[Textarea]
-    C --> H[Label]
+    C --> F[输入框]
+    C --> G[文本域]
+    C --> H[标签]
     
-    D --> I[Select]
-    D --> J[Checkbox]
-    D --> K[Switch]
+    D --> I[选择框]
+    D --> J[复选框]
+    D --> K[开关]
     
-    E --> L[Button]
-    E --> M[Submit Handler]
+    E --> L[按钮]
+    E --> M[提交处理器]
     
-    F --> N[Validation]
+    F --> N[验证]
     G --> N
     I --> N
     J --> N
     K --> N
     
-    N --> O{Valid?}
-    O -->|Yes| P[Form Submission]
-    O -->|No| Q[Show Errors]
+    N --> O{有效？}
+    O -->|是| P[表单提交]
+    O -->|否| Q[显示错误]
 ```
 
-### Layout Components Flow
+### 布局组件流程
 ```mermaid
 flowchart TD
-    A[Page Layout] --> B[Card Container]
-    B --> C[Card Header]
-    B --> D[Card Content]
-    B --> E[Card Footer]
+    A[页面布局] --> B[卡片容器]
+    B --> C[卡片头部]
+    B --> D[卡片内容]
+    B --> E[卡片底部]
     
-    C --> F[Card Title]
-    C --> G[Card Description]
+    C --> F[卡片标题]
+    C --> G[卡片描述]
     
-    D --> H[Main Content]
-    D --> I[Interactive Elements]
+    D --> H[主要内容]
+    D --> I[交互元素]
     
-    E --> J[Action Buttons]
-    E --> K[Status Indicators]
+    E --> J[操作按钮]
+    E --> K[状态指示器]
     
-    I --> L[Forms]
-    I --> M[Lists]
-    I --> N[Data Display]
+    I --> L[表单]
+    I --> M[列表]
+    I --> N[数据展示]
     
-    L --> O[Input Fields]
-    L --> P[Buttons]
+    L --> O[输入字段]
+    L --> P[按钮]
     
-    M --> Q[Scrollable Areas]
-    M --> R[Item Cards]
+    M --> Q[可滚动区域]
+    M --> R[项目卡片]
     
-    N --> S[Progress Bars]
-    N --> T[Badges]
-    N --> U[Tooltips]
+    N --> S[进度条]
+    N --> T[徽章]
+    N --> U[工具提示]
 ```
 
-### Theme System Flow
+### 主题系统流程
 ```mermaid
 flowchart TD
-    A[Theme Provider] --> B[Detect System Preference]
-    B --> C{User Override?}
-    C -->|Yes| D[Use User Setting]
-    C -->|No| E[Use System Setting]
+    A[主题提供器] --> B[检测系统偏好]
+    B --> C{用户覆盖？}
+    C -->|是| D[使用用户设置]
+    C -->|否| E[使用系统设置]
     
-    D --> F[Apply Theme]
+    D --> F[应用主题]
     E --> F
     
-    F --> G[Update CSS Variables]
-    G --> H[Component Re-render]
-    H --> I[Theme Toggle Update]
+    F --> G[更新 CSS 变量]
+    G --> H[组件重新渲染]
+    H --> I[主题切换更新]
     
-    J[User Clicks Toggle] --> K[Switch Theme]
-    K --> L[Save Preference]
+    J[用户点击切换] --> K[切换主题]
+    K --> L[保存偏好]
     L --> D
 ```
 
-### Responsive Design Flow
+### 响应式设计流程
 ```mermaid
 flowchart TD
-    A[Screen Size Detection] --> B{Breakpoint Check}
-    B -->|< 640px| C[Mobile Layout]
-    B -->|640px - 768px| D[Small Tablet]
-    B -->|768px - 1024px| E[Tablet Layout]
-    B -->|1024px - 1280px| F[Desktop Layout]
-    B -->|> 1280px| G[Large Desktop]
+    A[屏幕尺寸检测] --> B{断点检查}
+    B -->|< 640px| C[移动端布局]
+    B -->|640px - 768px| D[小平板]
+    B -->|768px - 1024px| E[平板布局]
+    B -->|1024px - 1280px| F[桌面布局]
+    B -->|> 1280px| G[大桌面]
     
-    C --> H[Stack Vertically]
-    C --> I[Hide Secondary Nav]
-    C --> J[Compact Buttons]
+    C --> H[垂直堆叠]
+    C --> I[隐藏次要导航]
+    C --> J[紧凑按钮]
     
-    D --> K[2-Column Grid]
-    E --> L[3-Column Grid]
-    F --> M[Sidebar + Main]
-    G --> N[Wide Layout]
+    D --> K[2 列网格]
+    E --> L[3 列网格]
+    F --> M[侧边栏 + 主内容]
+    G --> N[宽布局]
     
-    H --> O[Apply Mobile Styles]
+    H --> O[应用移动端样式]
     I --> O
     J --> O
-    K --> P[Apply Tablet Styles]
+    K --> P[应用平板样式]
     L --> P
-    M --> Q[Apply Desktop Styles]
+    M --> Q[应用桌面样式]
     N --> Q
 ```
 
-### Form Example with Components
+### 带组件的表单示例
 ```tsx
 <form>
-  <Input placeholder="Enter text..." />
-  <Textarea placeholder="Enter description..." />
+  <Input placeholder="输入文本..." />
+  <Textarea placeholder="输入描述..." />
   <Select>
-    <SelectItem value="option1">Option 1</SelectItem>
+    <SelectItem value="option1">选项 1</SelectItem>
   </Select>
-  <Button type="submit">Submit</Button>
+  <Button type="submit">提交</Button>
 </form>
 ```
 
-### Layout Example with Components
+### 带组件的布局示例
 ```tsx
 <Card>
   <CardHeader>
-    <CardTitle>Title</CardTitle>
+    <CardTitle>标题</CardTitle>
   </CardHeader>
   <CardContent>
-    Content goes here
+    内容在此处
   </CardContent>
 </Card>
 ```
 
-## 🔧 Configuration
+## 🔧 配置
 
-Components are configured via `components.json`:
+组件通过 `components.json` 配置：
 ```json
 {
   "style": "default",

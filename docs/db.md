@@ -1,58 +1,59 @@
-# Database Setup
+# 数据库设置
 
-## Overview
+## 概述
 
-Study Sphere uses SQLite with Drizzle ORM for type-safe database operations.
+Study Sphere 使用 SQLite 配合 Drizzle ORM 进行类型安全的数据库操作。
 
-## Quick Start
+## 快速开始
 
-### Prerequisites
-- Bun runtime
-- SQLite (built-in)
+### 前置条件
+- Bun 运行时
+- SQLite（内置）
 
-### Installation
+### 安装
 ```bash
-# Clone repository
+# 克隆仓库
 git clone https://github.com/k0msenapati/study-sphere.git
 cd study-sphere
 
-# Install dependencies
+# 安装依赖
 bun install
 
-# Set up environment
+# 设置环境
 cp .env.example .env.local
-# Edit .env.local with your GROQ_API_KEY
+# 编辑 .env.local，填入你的 LLM_API_KEY / OPENAI_API_KEY（推荐 Vercel AI Gateway 的 vck_ 开头密钥）
 ```
 
-## Environment Configuration
+## 环境配置
 
-### Required Variables
+### 必需变量
 ```env
-# Database
+# 数据库
 DATABASE_URL="file:./sqlite.db"
 
-# AI Integration
-GROQ_API_KEY="your-groq-api-key-here"
+# AI 集成（Vercel AI Gateway，推荐 vck_ 开头密钥）
+LLM_API_KEY="your-vercel-ai-gateway-key-here"
+OPENAI_API_KEY="your-vercel-ai-gateway-key-here"
 
-# Security
+# 安全
 JWT_SECRET="your-jwt-secret-key"
 ```
 
-## Database Setup
+## 数据库设置
 
-### Initialize Database
+### 初始化数据库
 ```bash
-# Generate migration files
+# 生成迁移文件
 bun run db:generate
 
-# Apply migrations
+# 应用迁移
 bun run db:migrate
 
-# Optional: Open database studio
+# 可选：打开数据库管理界面
 bun run db:studio
 ```
 
-### Configuration Files
+### 配置文件
 
 #### drizzle.config.ts
 ```typescript
@@ -77,39 +78,39 @@ const sqlite = new Database('./sqlite.db');
 export const db = drizzle(sqlite);
 ```
 
-## Schema Overview
+## 模式概述
 
-### Core Tables
-- **users**: User authentication
-- **notes**: Rich text notes
-- **tasks**: Task management
-- **chats**: AI conversation history
-- **daily_reviews**: Progress tracking
-- **user_settings**: User preferences
+### 核心表
+- **users**：用户认证
+- **notes**：富文本笔记
+- **tasks**：任务管理
+- **chats**：AI 对话历史
+- **daily_reviews**：进度追踪
+- **user_settings**：用户偏好设置
 
-### Relationships
-- All tables link to users via `userId`
-- Foreign key constraints with cascade delete
-- Timestamps for created/updated tracking
+### 关系
+- 所有表通过 `userId` 关联到用户
+- 外键约束带级联删除
+- 创建/更新时间戳自动追踪
 
-## Available Commands
+## 可用命令
 
 ```bash
-# Database operations
-bun run db:generate    # Generate migrations
-bun run db:migrate     # Apply migrations
-bun run db:push        # Push schema changes
-bun run db:studio      # Open database studio
+# 数据库操作
+bun run db:generate    # 生成迁移
+bun run db:migrate     # 应用迁移
+bun run db:push        # 推送模式变更
+bun run db:studio      # 打开数据库管理界面
 
-# Development
-bun run dev           # Start development server
-bun run build         # Build for production
+# 开发
+bun run dev           # 启动开发服务器
+bun run build         # 构建生产版本
 ```
 
-## Development Notes
+## 开发注意事项
 
-- SQLite file stored in project root
-- Migrations stored in `/drizzle` folder
-- Schema defined in `src/lib/db/schema.ts`
-- Auto-generated timestamps
-- Type-safe queries with Drizzle ORM
+- SQLite 文件存储在项目根目录
+- 迁移文件存储在 `/drizzle` 文件夹
+- 模式定义在 `src/lib/db/schema.ts`
+- 自动生成时间戳
+- 使用 Drizzle ORM 进行类型安全查询

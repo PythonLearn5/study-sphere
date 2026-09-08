@@ -1,89 +1,89 @@
-# API Documentation
+# API 文档
 
-## 🚀 Overview
+## 🚀 概述
 
-Study Sphere provides a REST API for managing notes, tasks, flashcards, and AI-powered features.
+Study Sphere 提供 REST API 用于管理笔记、任务、抽认卡和 AI 驱动功能。
 
 <details>
-<summary>🔐 <strong>Authentication</strong></summary>
+<summary>🔐 <strong>认证</strong></summary>
 
-All API endpoints require JWT authentication via HTTP-only cookies.
+所有 API 端点都需要通过 HTTP-only Cookie 进行 JWT 认证。
 
-### Auth Endpoints
+### 认证端点
 ```typescript
-POST /api/auth/register   // User registration
-POST /api/auth/login      // User login  
-POST /api/auth/logout     // User logout
-GET  /api/auth/session    // Check session
-GET  /api/auth/me         // Get user info
+POST /api/auth/register   // 用户注册
+POST /api/auth/login      // 用户登录
+POST /api/auth/logout     // 用户登出
+GET  /api/auth/session    // 检查会话
+GET  /api/auth/me         // 获取用户信息
 ```
 
 </details>
 
 <details>
-<summary>📋 <strong>Core Endpoints</strong></summary>
+<summary>📋 <strong>核心端点</strong></summary>
 
-### Notes
+### 笔记
 ```typescript
-GET    /api/notes         // Get user notes
-POST   /api/notes         // Create note
-PUT    /api/notes/:id     // Update note
-DELETE /api/notes/:id     // Delete note
+GET    /api/notes         // 获取用户笔记
+POST   /api/notes         // 创建笔记
+PUT    /api/notes/:id     // 更新笔记
+DELETE /api/notes/:id     // 删除笔记
 ```
 
-### Tasks  
+### 任务
 ```typescript
-GET    /api/tasks         // Get user tasks
-POST   /api/tasks         // Create task
-PUT    /api/tasks/:id     // Update task
-DELETE /api/tasks/:id     // Delete task
+GET    /api/tasks         // 获取用户任务
+POST   /api/tasks         // 创建任务
+PUT    /api/tasks/:id     // 更新任务
+DELETE /api/tasks/:id     // 删除任务
 ```
 
-### AI Chat
+### AI 对话
 ```typescript
-GET    /api/chats         // Get chat history
-POST   /api/chats         // Save chat message
-DELETE /api/chats/:id     // Delete chat
+GET    /api/chats         // 获取对话历史
+POST   /api/chats         // 保存对话消息
+DELETE /api/chats/:id     // 删除对话
 ```
 
-### Flashcards (AI-Powered)
+### 抽认卡（AI 驱动）
 ```typescript
-POST /api/copilotkit/generate-flashcards  // Generate from text
-POST /api/copilotkit/explain-flashcard    // Explain flashcard
+POST /api/copilotkit/generate-flashcards  // 从文本生成
+POST /api/copilotkit/explain-flashcard    // 解释抽认卡
 ```
 
-### Settings & Reviews
+### 设置与回顾
 ```typescript
-GET  /api/user-settings   // Get preferences
-PUT  /api/user-settings   // Update preferences
-GET  /api/daily-reviews   // Get reviews
-POST /api/daily-reviews   // Create review
+GET  /api/user-settings   // 获取偏好设置
+PUT  /api/user-settings   // 更新偏好设置
+GET  /api/daily-reviews   // 获取回顾记录
+POST /api/daily-reviews   // 创建回顾记录
 ```
 
 </details>
 
 <details>
-<summary>🤖 <strong>AI Integration</strong></summary>
+<summary>🤖 <strong>AI 集成</strong></summary>
 
-### CopilotKit Endpoint
+### CopilotKit 端点
 ```typescript
-POST /api/copilotkit     // Main AI processing endpoint
+POST /api/copilotkit     // 主 AI 处理端点
 ```
 
-**Powers:**
-- Study buddy chat responses
-- Flashcard generation from text
-- Content explanations
-- Study suggestions
+**功能包括：**
+- 学习伙伴对话回复
+- 从文本生成抽认卡
+- 内容解释
+- 学习建议
 
-**AI Model:** GROQ Gemma2-9B-IT
+**AI 模型：** openai:gpt-4o-mini（通过 Vercel AI Gateway）
 
 </details>
 
 <details>
-<summary>📝 <strong>Example Usage</strong></summary>
+<summary>📝 <strong>使用示例</strong></summary>
 
-### Create a Note
+### 创建笔记
 ```bash
 curl -X POST /api/notes \
   -H "Content-Type: application/json" \
@@ -94,7 +94,7 @@ curl -X POST /api/notes \
   }'
 ```
 
-### Generate Flashcards
+### 生成抽认卡
 ```bash
 curl -X POST /api/copilotkit/generate-flashcards \
   -H "Content-Type: application/json" \
@@ -109,9 +109,8 @@ curl -X POST /api/copilotkit/generate-flashcards \
 
 ---
 
-## 📞 Support
+## 📞 支持
 
-- **Issues**: Create GitHub issues for bugs
-- **API Problems**: Check authentication and request format
-- **Feature Requests**: Use GitHub discussions
-
+- **问题反馈**：在 GitHub 提交 Bug 报告
+- **API 问题**：检查认证和请求格式
+- **功能建议**：使用 GitHub 讨论区

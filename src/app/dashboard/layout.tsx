@@ -6,21 +6,18 @@ import { Sidebar } from "@/components/dashboard/sidebar"
 import { FlashcardsProvider } from "@/lib/flashcards/flashcards-provider"
 import { TasksProvider } from "@/lib/tasks/tasks-provider"
 import { FlowchartProvider } from "@/lib/flowcharts/flowcharts-provider"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { CopilotKit } from "@copilotkit/react-core"
+import { CopilotPopup } from "@copilotkit/react-ui"
+import { HttpAgent } from "@ag-ui/client"
+import "@copilotkit/react-ui/styles.css"
 
-// ⚠️ 已禁用 CopilotKit Provider
-// 原因：聊天页已经重写为直接调用 /api/chat/completion（原生 SSE 流式），
-// 不再依赖 CopilotKit。如果保留 CopilotKit Provider，它会在每个 dashboard 页面
-// 自动发起 GET /api/copilotkit/info 握手探测，一旦探测失败就反复 404 + 5000ms
-// 超时报警（Runtime did not answer within 5000ms / runtime_info_fetch_failed），
-// 污染 Console，干扰我们调 Vercel AI Gateway。
-//
-// 将来如果要用回 CopilotKit 的 side panel 聊天功能，把下面 import 恢复、
-// 并在 return 里恢复 <CopilotKit runtimeUrl="/api/copilotkit"> 包裹 children 即可。
-//
-// import { CopilotKit } from "@copilotkit/react-core"
-// import { CopilotPopup } from "@copilotkit/react-ui"
-// import "@copilotkit/react-ui/styles.css"
+// ℹ️ CopilotKit Provider 已恢复（用于学习 CopilotKit 功能用法）
+// 注意：
+//  - 主聊天页 /dashboard/chat 仍然走自研 SSE 接口 /api/chat/completion（用于对比学习）
+//  - 本 Provider 提供的是【右下角悬浮气泡 CopilotPopup】那套 AI 助手（基于 Copilot Runtime）
+//  - 如果只想用 /dashboard/chat 而不想看到气泡，只需删除下面 <CopilotPopup/> 一行即可
+//  - 握手探测端点 GET /api/copilotkit/info 已启用，不会再 404 刷屏
 
 export default function DashboardLayout({
   children,
@@ -29,6 +26,13 @@ export default function DashboardLayout({
 }) {
   const [session, setSession] = useState<{ userId: number; email: string } | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const agents__unsafe_dev_only = useMemo(() => ({
+    default: new HttpAgent({
+      description: "默认学习助手（基于 Vercel AI Gateway 的 openai:gpt-4o-mini）。擅长笔记、闪卡、流程图、测验的一般性学习问题。",
+      url: "/api/copilotkit",
+    }),
+  }), [])
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -65,19 +69,34 @@ export default function DashboardLayout({
   }
 
   return (
-    <FlashcardsProvider>
-      <TasksProvider>
-        <FlowchartProvider>
-          <div className="flex h-screen bg-background">
-            <Sidebar session={session} />
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <main className="flex-1 overflow-y-auto bg-background">
-                {children}
-              </main>
+    <CopilotKit
+      runtimeUrl="/api/copilotkit"
+      agents__unsafe_dev_only={agents__unsafe_dev_only}
+      useSingleEndpoint={true}
+    >
+      <FlashcardsProvider>
+        <TasksProvider>
+          <FlowchartProvider>
+            <div className="flex h-screen bg-background">
+              <Sidebar session={session} />
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <main className="flex-1 overflow-y-auto bg-background">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
-        </FlowchartProvider>
-      </TasksProvider>
-    </FlashcardsProvider>
+            <CopilotPopup
+              defaultOpen={false}
+              labels={{
+                title: "Study Sphere AI 助手 (CopilotKit)",
+                initial: "有什么学习问题？可以问我任何关于笔记、闪卡、流程图、测验的内容～",
+                placeholder: "输入你的问题…",
+              }}
+              clickOutsideToClose={true}
+            />
+          </FlowchartProvider>
+        </TasksProvider>
+      </FlashcardsProvider>
+    </CopilotKit>
   )
 }

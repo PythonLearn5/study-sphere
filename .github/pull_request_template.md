@@ -1,23 +1,23 @@
-## Description
+## 描述
 
-Please include a summary of the changes and the related issue. 
+请简要说明本次修改的内容以及关联的 Issue。
 
-Fixes #(issue number)
+修复 #（Issue 编号）
 
-## Type of change
+## 修改类型
 
-- [ ] Bug fix
-- [ ] New feature
+- [ ] Bug 修复
+- [ ] 新增功能
 
-## Screenshots / Video
+## 截图 / 视频
 
-Please include a video or screenshots for the previewing changes. 
+请附上视频或截图以便预览变更效果。
 
-## How Has This Been Tested?
+## 测试说明
 
-Please describe the tests you ran and how you verified your changes.
+请描述您运行了哪些测试，以及如何验证您的修改。
 
-## Checklist:
+## 检查清单：
 
-- [ ] I have performed a self-review of my code
-- [ ] My changes generate no new warnings
+- [ ] 我已对代码进行了自我审查
+- [ ] 我的修改未引入新的警告

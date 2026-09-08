@@ -1,218 +1,218 @@
-# 🎯 AI Flowchart Generator Feature - ✅ FULLY FUNCTIONAL
+# 🎯 AI 流程图生成器功能 - ✅ 完全可用
 
-## Overview
+## 概述
 
-The AI Flowchart Generator is a **fully working** feature in StudySphere that allows users to create visual flowcharts and diagrams from natural language descriptions using AI and Mermaid.js integration with CopilotKit. 
+AI 流程图生成器是 Study Sphere 中一个**完全可用**的功能，允许用户通过自然语言描述，借助 AI 和 Mermaid.js 与 CopilotKit 的集成来创建可视化流程图和图表。
 
-**Status**: ✅ Complete and operational - CopilotKit successfully generates flowcharts through natural language processing.
+**状态**：✅ 已完成并可运行 - CopilotKit 通过自然语言处理成功生成流程图。
 
-## ✨ Features
+## ✨ 功能特性
 
-### 🤖 AI-Powered Generation
-- **Natural Language Input**: Describe your concept in plain English
-- **Multiple Chart Types**: Support for flowcharts, sequence diagrams, class diagrams, state diagrams, ER diagrams, mind maps, and timelines
-- **Complexity Levels**: Simple, detailed, and comprehensive generation options
-- **CopilotKit Integration**: Seamless AI assistance with contextual suggestions
+### 🤖 AI 驱动生成
+- **自然语言输入**：用简单的英语描述你的概念
+- **多种图表类型**：支持流程图、时序图、类图、状态图、ER 图、思维导图和时间线
+- **复杂度级别**：简单、详细和全面的生成选项
+- **CopilotKit 集成**：无缝 AI 辅助，带上下文建议
 
-### 📊 Chart Types Supported
+### 📊 支持的图表类型
 
-1. **Flowcharts** - Process flows and decision trees
-2. **Sequence Diagrams** - Interaction flows between entities
-3. **Class Diagrams** - Object-oriented design structures
-4. **State Diagrams** - State transitions and workflows
-5. **Entity-Relationship Diagrams** - Database relationships
-6. **Mind Maps** - Hierarchical information structure
-7. **Timelines** - Sequential process visualization
+1. **流程图** - 处理流程和决策树
+2. **时序图** - 实体之间的交互流程
+3. **类图** - 面向对象设计结构
+4. **状态图** - 状态转换和工作流
+5. **实体关系图** - 数据库关系
+6. **思维导图** - 分层信息结构
+7. **时间线** - 顺序过程可视化
 
-### 🎨 User Interface
+### 🎨 用户界面
 
-- **4-Tab Interface**:
-  - **Generate**: Create new flowcharts with AI
-  - **Preview**: View and edit generated charts
-  - **Library**: Manage saved flowcharts
-  - **Templates**: Pre-built templates for common use cases
+- **4 个标签页界面**：
+  - **生成**：用 AI 创建新流程图
+  - **预览**：查看和编辑生成的图表
+  - **库**：管理已保存的流程图
+  - **模板**：常见用例的预构建模板
 
-### 🔧 Technical Features
+### 🔧 技术特性
 
-- **Real-time Preview**: Live Mermaid.js rendering
-- **Code Editor**: Direct Mermaid syntax editing
-- **Export Options**: Download as .mmd files
-- **Copy to Clipboard**: Easy sharing of Mermaid code
-- **Persistent Storage**: Save flowcharts to library (localStorage)
+- **实时预览**：即时 Mermaid.js 渲染
+- **代码编辑器**：直接编辑 Mermaid 语法
+- **导出选项**：下载为 .mmd 文件
+- **复制到剪贴板**：轻松共享 Mermaid 代码
+- **持久存储**：将流程图保存到库（localStorage）
 
-## 🚀 Usage Guide
+## 🚀 使用指南
 
-### Creating Your First Flowchart
+### 创建你的第一个流程图
 
-1. **Navigate to Flowcharts**
-   - Go to Dashboard → Flowcharts (GitBranch icon in sidebar)
+1. **导航到流程图**
+   - 前往仪表盘 → 流程图（侧边栏中的 GitBranch 图标）
 
-2. **Generate Tab**
-   - Enter your concept description (e.g., "User authentication process")
-   - Select chart type (Flowchart, Sequence, etc.)
-   - Choose complexity level (Simple, Detailed, Comprehensive)
-   - Click "Generate Flowchart"
+2. **生成标签页**
+   - 输入你的概念描述（例如："用户认证流程"）
+   - 选择图表类型（流程图、时序图等）
+   - 选择复杂度级别（简单、详细、全面）
+   - 点击"生成流程图"
 
-3. **Preview Tab**
-   - View the generated visual flowchart
-   - Edit the Mermaid code directly if needed
-   - Save to library with title and description
+3. **预览标签页**
+   - 查看生成的可视化流程图
+   - 如需要可直接编辑 Mermaid 代码
+   - 带标题和描述保存到库
 
-4. **Library Tab**
-   - View all saved flowcharts
-   - Quick access to view and copy existing charts
+4. **库标签页**
+   - 查看所有已保存的流程图
+   - 快速访问查看和复制现有图表
 
-5. **Templates Tab**
-   - Browse pre-built templates by category
-   - Business, Technology, Education templates available
-   - One-click template usage
+5. **模板标签页**
+   - 按类别浏览预构建模板
+   - 提供商业、技术、教育模板
+   - 一键使用模板
 
-### 🤖 CopilotKit Integration
+### 🤖 CopilotKit 集成
 
-The feature includes powerful AI assistance through CopilotKit:
+该功能通过 CopilotKit 包含强大的 AI 辅助：
 
-#### Available Actions
+#### 可用操作
 
 1. **`generateFlowchart`**
    ```
-   Generate a flowchart for "user login process" as a sequence diagram with detailed complexity
+   为"用户登录流程"生成一个详细复杂度的时序图
    ```
 
 2. **`saveFlowchart`**
    ```
-   Save this flowchart with title "User Authentication Flow"
+   以标题"用户认证流程"保存此流程图
    ```
 
-#### Contextual Awareness
-- AI can see your current flowcharts library
-- Understands generation state and preferences
-- Provides intelligent suggestions for concept descriptions
+#### 上下文感知
+- AI 可以看到你当前的流程图库
+- 了解生成状态和偏好
+- 为概念描述提供智能建议
 
-### 📝 Example Concepts
+### 📝 示例概念
 
-**Business Processes:**
-- "Customer onboarding workflow"
-- "Invoice approval process"
-- "Project management lifecycle"
+**业务流程：**
+- "客户入职工作流"
+- "发票审批流程"
+- "项目管理生命周期"
 
-**Technical Workflows:**
-- "CI/CD pipeline"
-- "Database backup procedure"
-- "API request handling"
+**技术工作流：**
+- "CI/CD 管道"
+- "数据库备份程序"
+- "API 请求处理"
 
-**Educational Content:**
-- "Scientific method steps"
-- "Learning assessment cycle"
-- "Research methodology"
+**教育内容：**
+- "科学方法步骤"
+- "学习评估周期"
+- "研究方法论"
 
-## 🏗️ Technical Implementation
+## 🏗️ 技术实现
 
-### Architecture
+### 架构
 
 ```
 📁 src/
 ├── 📁 app/dashboard/flowcharts/
-│   └── page.tsx                    # Main flowcharts page
+│   └── page.tsx                    # 主流程图页面
 ├── 📁 lib/flowcharts/
-│   ├── types.ts                    # TypeScript interfaces
-│   └── flowcharts-provider.tsx     # React context provider
+│   ├── types.ts                    # TypeScript 接口
+│   └── flowcharts-provider.tsx     # React 上下文提供器
 ├── 📁 components/flowcharts/
-│   ├── flowchart-viewer.tsx        # Mermaid rendering component
-│   ├── flowchart-generator.tsx     # Generation form component
-│   └── flowchart-templates.tsx     # Pre-built templates
+│   ├── flowchart-viewer.tsx        # Mermaid 渲染组件
+│   ├── flowchart-generator.tsx     # 生成表单组件
+│   └── flowchart-templates.tsx     # 预构建模板
 └── 📁 app/api/flowcharts/
-    └── route.ts                    # Advanced generation API
+    └── route.ts                    # 高级生成 API
 ```
 
-### Key Dependencies
+### 关键依赖
 
-- **mermaid**: Chart rendering library
-- **@copilotkit/react-core**: AI integration
-- **@copilotkit/react-textarea**: Smart text input
-- **@copilotkit/react-ui**: AI chat interface
+- **mermaid**：图表渲染库
+- **@copilotkit/react-core**：AI 集成
+- **@copilotkit/react-textarea**：智能文本输入
+- **@copilotkit/react-ui**：AI 对话界面
 
-### Data Flow
+### 数据流
 
-1. User inputs concept description
-2. CopilotKit provides intelligent suggestions
-3. Concept processed through AI generation logic
-4. Mermaid code generated based on templates
-5. Real-time preview rendered using Mermaid.js
-6. User can edit, save, or export the result
+1. 用户输入概念描述
+2. CopilotKit 提供智能建议
+3. 通过 AI 生成逻辑处理概念
+4. 基于模板生成 Mermaid 代码
+5. 使用 Mermaid.js 渲染实时预览
+6. 用户可以编辑、保存或导出结果
 
-## 🎨 Templates Library
+## 🎨 模板库
 
-### Business Templates
-- Project Management Lifecycle
-- Customer Journey Mapping
-- Startup Planning Mind Map
+### 业务模板
+- 项目管理生命周期
+- 客户旅程地图
+- 创业规划思维导图
 
-### Technology Templates
-- User Authentication Flow
-- Software Development Lifecycle
-- Database Design Process
-- Machine Learning Pipeline
+### 技术模板
+- 用户认证流程
+- 软件开发生命周期
+- 数据库设计流程
+- 机器学习管道
 
-### Educational Templates
-- Learning Process Flow
-- Research Methodology
-- Study Strategy Mind Map
+### 教育模板
+- 学习过程流程
+- 研究方法论
+- 学习策略思维导图
 
-## 🔮 Future Enhancements
+## 🔮 未来增强
 
-### Planned Features
-- **AI-Enhanced Generation**: Integration with advanced LLMs for smarter chart creation
-- **Collaborative Editing**: Real-time collaboration on flowcharts
-- **Export Formats**: PDF, PNG, SVG export options
-- **Advanced Templates**: Industry-specific template libraries
-- **Version Control**: Track changes and revisions
-- **Integration**: Connect with other StudySphere features
+### 计划功能
+- **AI 增强生成**：与高级 LLM 集成以实现更智能的图表创建
+- **协作编辑**：流程图上的实时协作
+- **导出格式**：PDF、PNG、SVG 导出选项
+- **高级模板**：特定行业的模板库
+- **版本控制**：跟踪变更和修订
+- **集成**：与其他 Study Sphere 功能连接
 
-### API Integrations
-- **Diagram Export Service**: Cloud-based diagram generation
-- **Template Marketplace**: Community-shared templates
-- **AI Model Integration**: Custom AI models for specific domains
+### API 集成
+- **图表导出服务**：基于云的图表生成
+- **模板市场**：社区共享模板
+- **AI 模型集成**：特定领域的自定义 AI 模型
 
-## 🤝 Contributing
+## 🤝 贡献
 
-To extend the flowcharts feature:
+要扩展流程图功能：
 
-1. **Add New Chart Types**: Extend the `chartType` enum and add templates
-2. **Create Templates**: Add new templates in `flowchart-templates.tsx`
-3. **Enhance AI Logic**: Improve generation algorithms in the API route
-4. **UI Improvements**: Enhance the user interface components
+1. **添加新图表类型**：扩展 `chartType` 枚举并添加模板
+2. **创建模板**：在 `flowchart-templates.tsx` 中添加新模板
+3. **增强 AI 逻辑**：改进 API 路由中的生成算法
+4. **UI 改进**：增强用户界面组件
 
-## 📚 Resources
+## 📚 资源
 
-- [Mermaid.js Documentation](https://mermaid.js.org/)
-- [CopilotKit Documentation](https://docs.copilotkit.ai/)
-- [StudySphere API Documentation](./api.md)
+- [Mermaid.js 文档](https://mermaid.js.org/)
+- [CopilotKit 文档](https://docs.copilotkit.ai/)
+- [Study Sphere API 文档](./api.md)
 
-## 🐛 Troubleshooting
+## 🐛 故障排除
 
-### Common Issues
+### 常见问题
 
-1. **Charts Not Rendering**
-   - Check browser console for Mermaid errors
-   - Verify Mermaid syntax is valid
-   - Ensure proper chart type selection
+1. **图表不渲染**
+   - 检查浏览器控制台中是否有 Mermaid 错误
+   - 验证 Mermaid 语法有效
+   - 确保正确选择图表类型
 
-2. **AI Generation Fails**
-   - Check GROQ_API_KEY is configured
-   - Verify CopilotKit runtime is running
-   - Check network connectivity
+2. **AI 生成失败**
+   - 检查 LLM_API_KEY / OPENAI_API_KEY 是否已配置（推荐 Vercel AI Gateway 的 `vck_` 开头密钥）
+   - 验证 CopilotKit 运行时是否正在运行
+   - 检查网络连接
 
-3. **Save/Load Issues**
-   - Verify localStorage is available
-   - Check for quota limitations
-   - Clear browser cache if needed
+3. **保存/加载问题**
+   - 验证 localStorage 是否可用
+   - 检查配额限制
+   - 如需要清除浏览器缓存
 
-### Performance Tips
+### 性能提示
 
-- Keep flowchart complexity reasonable for better rendering
-- Use templates as starting points for complex diagrams
-- Regularly clean up unused flowcharts from library
+- 保持流程图复杂度合理以获得更好的渲染效果
+- 使用模板作为复杂图表的起点
+- 定期清理库中未使用的流程图
 
 ---
 
-*The AI Flowchart Generator brings the power of visual thinking to StudySphere, making complex concepts easier to understand and share through intelligent diagram creation.*
+*AI 流程图生成器将可视化思维的力量带到 Study Sphere，通过智能图表创建使复杂概念更易于理解和分享。*

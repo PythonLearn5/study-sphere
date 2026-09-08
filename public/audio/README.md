@@ -1,29 +1,29 @@
-# Audio Files for Study Area
+# 学习区音频文件
 
-This directory contains audio files for the Study Area ambient sounds and notifications.
+本目录存放学习区环境音效和通知提示的音频文件。
 
-## Expected Files:
+## 预期文件：
 
-### Ambient Sounds:
-- `rain.mp3` - Rain sounds for focus
-- `forest.mp3` - Forest/nature sounds
-- `cafe.mp3` - Coffee shop ambience
-- `white-noise.mp3` - White noise for concentration
+### 环境音效：
+- `rain.mp3` - 助于专注的雨声
+- `forest.mp3` - 森林/自然声音
+- `cafe.mp3` - 咖啡馆氛围
+- `white-noise.mp3` - 助于集中注意力的白噪音
 
-### Notification Sounds:
-- `session-complete.mp3` - Session completion notification
-- `break-reminder.mp3` - Break reminder notification
-- `timer-tick.mp3` - Timer tick sound (optional)
+### 通知音效：
+- `session-complete.mp3` - 学习时段完成通知
+- `break-reminder.mp3` - 休息提醒通知
+- `timer-tick.mp3` - 计时器滴答声（可选）
 
-## Audio Format Requirements:
-- Format: MP3 or OGG
-- Quality: Medium quality (128-192 kbps)
-- Duration: Loop-friendly for ambient sounds
-- Volume: Normalized to prevent sudden loud sounds
+## 音频格式要求：
+- 格式：MP3 或 OGG
+- 质量：中等质量（128-192 kbps）
+- 时长：环境音效应适合循环播放
+- 音量：已标准化，避免突然的巨响
 
-## File Size Considerations:
-- Keep ambient sound files under 5MB each
-- Use compressed audio formats
-- Consider looping shorter clips for larger sounds
+## 文件大小注意事项：
+- 每个环境音效文件请控制在 5MB 以内
+- 使用压缩音频格式
+- 较大的音效可考虑循环使用较短片段
 
-Place your audio files in this directory and they will be automatically detected by the Study Area component.
+将您的音频文件放置在此目录下，学习区组件会自动检测到它们。

@@ -1,27 +1,27 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: Bug 报告
+about: 创建报告以帮助我们改进
 title: '🐛: '
 labels: 'bug'
 assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**描述 Bug**
+请清晰简洁地描述该 Bug 是什么。
 
-**To Reproduce**
-Steps to reproduce the behaviour:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**复现步骤**
+复现该行为的步骤：
+1. 前往 '...'
+2. 点击 '....'
+3. 滚动到 '....'
+4. 看到错误
 
-**Expected behaviour**
-A clear and concise description of what you expected to happen.
+**预期行为**
+请清晰简洁地描述您期望发生的结果。
 
-**Screenshots / Video**
-If applicable, add screenshots or video to help explain your problem.
+**截图 / 视频**
+如适用，请添加截图或视频以帮助解释您的问题。
 
-**Additional context**
-Add any other context about the problem here.
+**补充信息**
+在此处添加与该问题相关的其他背景信息。

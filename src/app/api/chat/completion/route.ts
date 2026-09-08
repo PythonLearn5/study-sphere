@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       {
         error: "LLM 未配置",
         details:
-          "请在 .env.local 配置 LLM_API_KEY 或 GROQ_API_KEY，然后重启 dev 服务器。",
+          "请在 .env.local 配置 LLM_API_KEY 或 OPENAI_API_KEY（推荐 Vercel AI Gateway vck_ 开头密钥），然后重启 dev 服务器。",
         baseURL: LLM_BASE_URL_USED,
       },
       { status: 503 },
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       await runChatCompletionStream(
         { messages, model: LLM_MODELS.chat, temperature: 0.7, max_tokens: 2048 },
         {
-          onToken: (d) => (full += d),
+          onToken: (d) => { full += d; },
           onDone: () => {},
           onError: (err: LLMError) => {
             console.error("[api/chat/completion] non-stream error:", err.message, {

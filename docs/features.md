@@ -19,7 +19,7 @@
 | ⑧ 测验 | [dashboard/quizzes](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/quizzes/page.tsx) + [generate](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/quizzes/generate/page.tsx) + [做答](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/quizzes/[id]/page.tsx) | [quiz-subjects](file:///d:/GITHUB_tmp/study-sphere/src/app/api/quiz-subjects/route.ts) + [quiz-topics](file:///d:/GITHUB_tmp/study-sphere/src/app/api/quiz-topics/route.ts) + [AI 生成测验](file:///d:/GITHUB_tmp/study-sphere/src/app/api/quizzes/generate/route.ts) + [seed](file:///d:/GITHUB_tmp/study-sphere/src/app/api/seed-quiz-data/route.ts) | 科目 / 主题 / AI 自动出题 / 答题 / 收藏 / 完成记录 |
 | ⑨ 学习专注区 | [dashboard/study-area](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/study-area/page.tsx) | [focus-sessions](file:///d:/GITHUB_tmp/study-sphere/src/app/api/focus-sessions/route.ts) + [focus-sessions/stats](file:///d:/GITHUB_tmp/study-sphere/src/app/api/focus-sessions/stats/route.ts) | 番茄钟 / 专注记录统计 |
 | ⑩ AI 聊天（主聊天页） | [dashboard/chat](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/chat/page.tsx) | [api/chat/completion](file:///d:/GITHUB_tmp/study-sphere/src/app/api/chat/completion/route.ts) + [api/chats (历史保存)](file:///d:/GITHUB_tmp/study-sphere/src/app/api/chats/route.ts) | SSE 流式打字机、AI 学习助手对话、保存历史会话 |
-| ⑪ CopilotKit 集成（底层 / 备用） | [dashboard/layout.tsx (当前已禁用 Provider)](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx) | [api/copilotkit (主)](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts) + [info stub](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/info/route.ts) | AI Agent / Action / 侧栏聊天（现在主聊天已改走 ⑩，备用） |
+| ⑪ CopilotKit 集成（悬浮气泡 / Agent 层） | [dashboard/layout.tsx (Provider 已启用 + CopilotPopup 悬浮气泡)](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx) | [api/copilotkit (single-route 主端点 · Hono 模式)](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts) | 右下角 AI 悬浮气泡 / HttpAgent 注册 / useSingleEndpoint；Info 端点由 single-route 自动托管（已删除独立 info stub）；主聊天仍走 ⑩ |
 | ⑫ 个人中心 | [dashboard/profile](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/profile/page.tsx) | [api/profile/*](file:///d:/GITHUB_tmp/study-sphere/src/app/api/profile) + [api/user-settings](file:///d:/GITHUB_tmp/study-sphere/src/app/api/user-settings/route.ts) | 基本资料、头像、改密码、主题/学习设置、学习数据展示 |
 | ⑬ 通用 UI / 主题 | [theme-provider](file:///d:/GITHUB_tmp/study-sphere/src/components/theme-provider.tsx) + [components/ui](file:///d:/GITHUB_tmp/study-sphere/src/components/ui) | — | 亮色/深色主题、Shadcn/UI 组件库、Spotlight、Sparkle 等动效 |
 
@@ -108,15 +108,15 @@
 | 发送消息 / 流式渲染 (打字机) / 停止生成 | [chat/page.tsx sendMessage/stopGeneration](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/chat/page.tsx) |
 | 会话历史 (保存 / 删除) | [/api/chats](file:///d:/GITHUB_tmp/study-sphere/src/app/api/chats/route.ts) + 左下 Previous Chats 抽屉 |
 | 后端流式接口 (SSE) | [/api/chat/completion](file:///d:/GITHUB_tmp/study-sphere/src/app/api/chat/completion/route.ts) |
-| 统一 LLM 调用层 | [src/lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts)：自定义 Base 原生 Fetch / Groq 官方 SDK 双分支 |
+| 统一 LLM 调用层 | [src/lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts)：自定义 Base (Vercel AI Gateway) 原生 Fetch / OpenAI 兼容协议 |
 
-### 2.9 CopilotKit 集成 (备用 / 底层 Agent)
+### 2.9 CopilotKit 集成 (悬浮气泡 / 备用 Agent 层)
 
 | 功能 | 文件 |
 |------|------|
-| 运行时 HTTP 端点 | [/api/copilotkit](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts) (支持 GroqAdapter / OpenAIAdapter) |
-| 握手探测 stub | [/api/copilotkit/info](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/info/route.ts) |
-| 原 Provider 位置 (当前禁用) | [dashboard/layout.tsx CopilotKit 禁用说明](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L11-L23) |
+| 运行时 HTTP 端点 (single-route) | [/api/copilotkit](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts) — Hono single-route 模式，自动托管 /info 握手及 POST 消息 |
+| 前端 Provider 配置（已启用） | [dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx) — 开启 useSingleEndpoint=true + 通过 agents__unsafe_dev_only 注册 @ag-ui/client 的 HttpAgent（key=default） |
+| 悬浮气泡 UI | [dashboard/layout.tsx CopilotPopup](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L89-L97) |
 | 生成闪卡 / 讲解闪卡 | 已在 2.5 列出（调用统一 LLM 层） |
 | 生成流程图 (备用 CopilotKit 入口) | [/api/copilotkit/generate-flowchart](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/generate-flowchart/route.ts) |
 
@@ -155,18 +155,17 @@
 
 - **入口配置文件**：[.env.local](file:///d:/GITHUB_tmp/study-sphere/.env.local) / [.env.local.example](file:///d:/GITHUB_tmp/study-sphere/.env.local.example)
 - **统一 LLM 调用层**：[src/lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts)
-  - 若配置了 `LLM_BASE_URL`（例如 Vercel AI Gateway `https://ai-gateway.vercel.sh/v1`）：
+  - 配置 `LLM_BASE_URL` = Vercel AI Gateway `https://ai-gateway.vercel.sh/v1`（推荐）：
     - 走原生 `fetch`，最终 URL = `${LLM_BASE_URL}/chat/completions`，**不会**额外拼接 `/openai/v1`
-    - 模型名必须写成 `provider:model`（如 `groq:llama-3.1-8b-instant`）
-  - 若 `LLM_BASE_URL` 为空：
-    - 走 Groq SDK 直连官方（`https://api.groq.com/openai/v1`），使用 `GROQ_API_KEY`
+    - 模型名必须写成 `provider:model`（如 `openai:gpt-4o-mini`）
+    - 使用 `LLM_API_KEY` 或 `OPENAI_API_KEY`，推荐 Vercel AI Gateway 的 `vck_` 开头密钥
 - **5 个模型档位**：
   ```
-  LLM_MODEL_CHAT   (聊天/讲解)      ← 默认 groq:llama-3.1-8b-instant
-  LLM_MODEL_FAST   (快速任务)       ← 默认 groq:llama-3.1-8b-instant
-  LLM_MODEL_SMART  (JSON/推理)      ← 默认 groq:llama-3.3-70b-versatile
-  LLM_MODEL_FLOWCHART (Mermaid)     ← 默认 groq:gemma2-9b-it
-  LLM_MODEL_QUIZ   (出题)           ← 默认 groq:llama3-8b-8192
+  LLM_MODEL_CHAT   (聊天/讲解)      ← 默认 openai:gpt-4o-mini
+  LLM_MODEL_FAST   (快速任务)       ← 默认 openai:gpt-4o-mini
+  LLM_MODEL_SMART  (JSON/推理)      ← 默认 openai:gpt-3.5-turbo
+  LLM_MODEL_FLOWCHART (Mermaid)     ← 默认 openai:gpt-4o-mini
+  LLM_MODEL_QUIZ   (出题)           ← 默认 openai:gpt-3.5-turbo
   ```
 
 ---
