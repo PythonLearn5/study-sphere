@@ -28,19 +28,19 @@ LLM_BASE_URL=https://ai-gateway.vercel.sh/v1
 LLM_API_KEY=vck_XXXXXXXXXXXXXXXXXXXXXXXXXX         # Vercel AI Gateway Key（vck_ 开头）
 OPENAI_API_KEY=vck_XXXXXXXXXXXXXXXXXXXXXXXXXX      # 同上，兼容别名
 
-# 模型名：Vercel Gateway 必须是 provider:model，推荐模型如下
-LLM_MODEL_CHAT=openai:gpt-4o-mini
-LLM_MODEL_FAST=openai:gpt-4o-mini
-LLM_MODEL_SMART=openai:gpt-3.5-turbo
-LLM_MODEL_FLOWCHART=openai:gpt-4o-mini
-LLM_MODEL_QUIZ=openai:gpt-3.5-turbo
+# 模型名：Vercel Gateway 必须是 provider/model，推荐模型如下
+LLM_MODEL_CHAT=openai/gpt-4o-mini
+LLM_MODEL_FAST=openai/gpt-4o-mini
+LLM_MODEL_SMART=openai/gpt-3.5-turbo
+LLM_MODEL_FLOWCHART=openai/gpt-4o-mini
+LLM_MODEL_QUIZ=openai/gpt-3.5-turbo
 ```
 
 启动后在 **Node 终端** 观察这一行：
 
 ```
 [llm] ✅ 已初始化。BaseURL=https://ai-gateway.vercel.sh/v1，自定义 Base=true，
-      chat 模型=openai:gpt-4o-mini，smart 模型=openai:gpt-3.5-turbo
+      chat 模型=openai/gpt-4o-mini，smart 模型=openai/gpt-3.5-turbo
 ```
 
 如果看到的是 `⚠️ 未配置 API Key` → 重新检查 `.env.local` 是否保存、并重启 `npm run dev`（改 `.env.local` 必须重启）。
@@ -100,7 +100,7 @@ Invoke-RestMethod -Method Post `
 ```json
 {
   "content": "1. 先读题目再看文章；2. 记每段主旨句；3. 陌生词先结合上下文猜、再查词典……",
-  "model": "openai:gpt-4o-mini",
+  "model": "openai/gpt-4o-mini",
   "elapsedMs": 3820,
   "baseURL": "https://ai-gateway.vercel.sh/v1"
 }
@@ -111,9 +111,9 @@ Invoke-RestMethod -Method Post `
 | 错误场景 | 典型 status / message | 排查建议 |
 |---------|----------------------|---------|
 | Token 错 / 过期 | 401 `Invalid authentication token` | 去 Vercel → Dashboard → AI → AI Gateway → Keys 重新生成一个 `vck_` 开头的 key（注意不是 Vercel 个人 Account Token） |
-| 模型名错 | 404 `The requested resource was not found: /v1/chat/completions` 或 `model not found` | 必须 `provider:model`，例如 `openai:gpt-4o-mini`，纯模型名 `gpt-4o-mini` 不认识 |
+| 模型名错 | 404 `The requested resource was not found: /v1/chat/completions` 或 `model not found` | 必须 `provider/model`，例如 `openai/gpt-4o-mini`，纯模型名 `gpt-4o-mini` 不认识 |
 | 速率限制 | 429 `Rate limited` / `You exceeded your current quota` | 等 1 分钟再试，或升级 Vercel 额度 |
-| Provider Billing 未绑 | 如 `openai provider is not configured` | `openai:*` / `anthropic:*` 都需要 Vercel AI Gateway 后台绑定对应 Provider 的 Billing |
+| Provider Billing 未绑 | 如 `openai provider is not configured` | `openai/*` / `anthropic/*` 都需要 Vercel AI Gateway 后台绑定对应 Provider 的 Billing |
 | 自定义 Base 路径拼错（修过的 bug） | 旧错误：`/v1/openai/v1/chat/completions 404` | 用新版本的 [lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts) 自定义 Base 原生 fetch 分支，不会再加 `/openai/v1` |
 
 #### 样例 B：流式 SSE（打字机效果）
@@ -142,7 +142,7 @@ data: {"type":"delta","delta":"2"}
 
 data: {"type":"delta","delta":"。"}
 
-data: {"type":"done","model":"openai:gpt-4o-mini","elapsedMs":820,"finalContent":"2。"}
+data: {"type":"done","model":"openai/gpt-4o-mini","elapsedMs":820,"finalContent":"2。"}
 ```
 
 错误时会推 `type=error`：
@@ -243,7 +243,7 @@ curl.exe http://localhost:3000/api/copilotkit/info
 
 1. 发送消息后 Node 先打：
    ```
-   [CopilotKit OpenAIAdapter(Vercel-Gateway)] process start userMessages=1 model=openai:gpt-4o-mini baseURL=https://ai-gateway.vercel.sh/v1
+   [CopilotKit OpenAIAdapter(Vercel-Gateway)] process start userMessages=1 model=openai/gpt-4o-mini baseURL=https://ai-gateway.vercel.sh/v1
    ```
 2. 成功后打：
    ```
@@ -264,7 +264,7 @@ curl.exe http://localhost:3000/api/copilotkit/info
 
 **排错顺序：**
 1. `.env.local` 的 API Key 是否是 Vercel AI Gateway Key（`vck_` 开头），而不是个人 token。
-2. 模型名是否写成 `openai:...`；如果写 `gpt-4o-mini` 但没绑 OpenAI Billing，也会 Forbidden / model not found。
+2. 模型名是否写成 `openai/...`；如果写 `gpt-4o-mini` 但没绑 OpenAI Billing，也会 Forbidden / model not found。
 3. 用 1.4 节的 `/api/chat/completion` 非流式先把 Token / 模型名跑通。**只要 `/api/chat/completion` 能通，CopilotKit 调 LLM 就一定也能通**，因为它们共用同一层 `lib/llm.ts`（区别只在于 CopilotKit 的 OpenAIAdapter 目前仍用 SDK，出问题时建议直接复用聊天部分的 `runChatCompletionStream` 去改 `serviceAdapter.process`）。
 
 ### 2.5 CopilotKit 子目录下的 AI 工具端点（非流式）测试样例
@@ -340,7 +340,7 @@ Content-Type: application/json
 | 检查项 | 预期 | 工具 / 方法 |
 |--------|------|------------|
 | `.env.local` LLM_API_KEY 是否是 `vck_` 开头 | 是 | 肉眼 |
-| 5 个模型是否都写成 `provider:model` | 是 | `.env.local` 搜索 `:` 即可 |
+| 5 个模型是否都写成 `provider/model` | 是 | `.env.local` 搜索 `/` 即可 |
 | `GET /api/copilotkit/info` 返回 200 JSON（single-route 自动托管，无独立 stub 文件） | 通过 | curl |
 | `POST /api/chat/completion stream=false` 返回 200 + content 非空 | 通过 | 1.4 样例 A |
 | `/dashboard/chat` 空屏 UI 正常 | 通过 | 浏览器 |

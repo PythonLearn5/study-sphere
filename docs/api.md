@@ -76,7 +76,7 @@ POST /api/copilotkit     // 主 AI 处理端点
 - 内容解释
 - 学习建议
 
-**AI 模型：** openai:gpt-4o-mini（通过 Vercel AI Gateway）
+**AI 模型：** openai/gpt-4o-mini（通过 Vercel AI Gateway）
 
 </details>
 

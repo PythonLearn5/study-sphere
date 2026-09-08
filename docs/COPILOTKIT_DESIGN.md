@@ -21,7 +21,7 @@ npm run dev
    - 如需手动验证 /info 端点仍存在：`curl http://localhost:3000/api/copilotkit/info` 会返回 200 JSON（由 single-route 内部直接处理）
 4. **Node 终端**会打印：
    ```
-   [CopilotKit route] ✅ ServiceAdapter 构建完成：usingCustomBase=true baseURL=https://ai-gateway.vercel.sh/v1 model=openai:gpt-4o-mini
+   [CopilotKit route] ✅ ServiceAdapter 构建完成：usingCustomBase=true baseURL=https://ai-gateway.vercel.sh/v1 model=openai/gpt-4o-mini
    [CopilotKit OpenAIAdapter(Vercel-Gateway·FakeClient)] process start userMessages=1 ...
    [CopilotKit OpenAIAdapter(Vercel-Gateway·FakeClient)] process done
    ```
@@ -100,7 +100,7 @@ CopilotKit 不是一个聊天 UI 组件那么简单，它是一个 **"把 LLM Ag
                                         │ HTTPS (Bearer Token)
 ┌───────────────────────────────────────▼───────────────────────────────────────────────────────┐
 │  LLM Provider 层                                                                               │
-│  · Vercel AI Gateway（当前 .env.local 默认）：openai:gpt-4o-mini / openai:gpt-3.5-turbo    │
+│  · Vercel AI Gateway（当前 .env.local 默认）：openai/gpt-4o-mini / openai/gpt-3.5-turbo    │
 │  · 未来：Anthropic / Azure OpenAI / 任意 OpenAI-compatible 自建中转                          │
 └───────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -483,20 +483,20 @@ agents: [
   {
     name: "flashcard-expert",
     description: "擅长闪卡生成、复习规划。用户提到闪卡/卡组/复习时优先选。",
-    model: "openai:gpt-3.5-turbo",  // 专家可用更聪明的模型
+    model: "openai/gpt-3.5-turbo",  // 专家可用更聪明的模型
     instructions: "你是一位闪卡学习专家，回答多用例子。",
     actions: [createFlashcardsAction, showFlashcardStatsAction, ...],  // 只挂闪卡相关 action
   },
   {
     name: "quiz-expert",
     description: "擅长出题、测验。用户提到测验/出题/练习/考试时选。",
-    model: "openai:gpt-3.5-turbo",
+    model: "openai/gpt-3.5-turbo",
     actions: [generateQuizAction, ...],
   },
   {
     name: "general-helper",     // 默认 Agent
     description: "通用学习助手。",
-    model: "openai:gpt-4o-mini",
+    model: "openai/gpt-4o-mini",
     actions: [listTodayTasksAction, ...],
   },
 ]

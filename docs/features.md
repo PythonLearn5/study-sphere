@@ -157,15 +157,15 @@
 - **统一 LLM 调用层**：[src/lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts)
   - 配置 `LLM_BASE_URL` = Vercel AI Gateway `https://ai-gateway.vercel.sh/v1`（推荐）：
     - 走原生 `fetch`，最终 URL = `${LLM_BASE_URL}/chat/completions`，**不会**额外拼接 `/openai/v1`
-    - 模型名必须写成 `provider:model`（如 `openai:gpt-4o-mini`）
+    - 模型名必须写成 `provider/model`（如 `openai/gpt-4o-mini`）
     - 使用 `LLM_API_KEY` 或 `OPENAI_API_KEY`，推荐 Vercel AI Gateway 的 `vck_` 开头密钥
 - **5 个模型档位**：
   ```
-  LLM_MODEL_CHAT   (聊天/讲解)      ← 默认 openai:gpt-4o-mini
-  LLM_MODEL_FAST   (快速任务)       ← 默认 openai:gpt-4o-mini
-  LLM_MODEL_SMART  (JSON/推理)      ← 默认 openai:gpt-3.5-turbo
-  LLM_MODEL_FLOWCHART (Mermaid)     ← 默认 openai:gpt-4o-mini
-  LLM_MODEL_QUIZ   (出题)           ← 默认 openai:gpt-3.5-turbo
+  LLM_MODEL_CHAT   (聊天/讲解)      ← 默认 openai/gpt-4o-mini
+  LLM_MODEL_FAST   (快速任务)       ← 默认 openai/gpt-4o-mini
+  LLM_MODEL_SMART  (JSON/推理)      ← 默认 openai/gpt-3.5-turbo
+  LLM_MODEL_FLOWCHART (Mermaid)     ← 默认 openai/gpt-4o-mini
+  LLM_MODEL_QUIZ   (出题)           ← 默认 openai/gpt-3.5-turbo
   ```
 
 ---

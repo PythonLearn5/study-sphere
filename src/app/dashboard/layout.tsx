@@ -29,7 +29,7 @@ export default function DashboardLayout({
 
   const agents__unsafe_dev_only = useMemo(() => ({
     default: new HttpAgent({
-      description: "默认学习助手（基于 Vercel AI Gateway 的 openai:gpt-4o-mini）。擅长笔记、闪卡、流程图、测验的一般性学习问题。",
+      description: "默认学习助手（基于 Vercel AI Gateway 的 openai/gpt-4o-mini）。擅长笔记、闪卡、流程图、测验的一般性学习问题。",
       url: "/api/copilotkit",
     }),
   }), [])

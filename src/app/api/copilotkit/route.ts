@@ -27,7 +27,7 @@ class DefaultAgent extends AbstractAgent {
   constructor() {
     super({
       description:
-        "默认学习助手（基于 Vercel AI Gateway 的 openai:gpt-4o-mini）。" +
+        "默认学习助手（基于 Vercel AI Gateway 的 openai/gpt-4o-mini）。" +
         "擅长笔记、闪卡、流程图、测验的一般性学习问题。",
     })
   }
@@ -275,7 +275,7 @@ export const POST = async (req: NextRequest) => {
         error: "LLM not configured",
         details:
           "未配置 LLM_API_KEY 或 OPENAI_API_KEY，或 .env.local 未生效（重启 dev 服务器；" +
-          "如果是 Vercel Gateway 请确保 key 以 vck_ 开头，模型名是 provider:model 格式）。",
+          "如果是 Vercel Gateway 请确保 key 以 vck_ 开头，模型名是 provider/model 格式）。",
         baseURL: LLM_BASE_URL_USED,
         model: LLM_MODELS.chat,
       }),

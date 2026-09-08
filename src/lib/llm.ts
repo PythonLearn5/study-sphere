@@ -40,13 +40,13 @@ export const LLM_API_KEY_SET = !!API_KEY;
 // ============ 旧接口兼容（现在永远为 null，保留仅避免 import 报错） ============
 export const llmClient: null = null;
 
-// ============ 模型名（Vercel Gateway 必须是 provider:model 格式） ============
+// ============ 模型名（Vercel Gateway 必须是 provider/model 格式） ============
 export const LLM_MODELS = {
-  chat: process.env.LLM_MODEL_CHAT || process.env.OPENAI_MODEL || "openai:gpt-4o-mini",
-  fast: process.env.LLM_MODEL_FAST || "openai:gpt-4o-mini",
-  smart: process.env.LLM_MODEL_SMART || "openai:gpt-3.5-turbo",
-  flowchart: process.env.LLM_MODEL_FLOWCHART || "openai:gpt-4o-mini",
-  quiz: process.env.LLM_MODEL_QUIZ || "openai:gpt-3.5-turbo",
+  chat: process.env.LLM_MODEL_CHAT || process.env.OPENAI_MODEL || "openai/gpt-4o-mini",
+  fast: process.env.LLM_MODEL_FAST || "openai/gpt-4o-mini",
+  smart: process.env.LLM_MODEL_SMART || "openai/gpt-3.5-turbo",
+  flowchart: process.env.LLM_MODEL_FLOWCHART || "openai/gpt-4o-mini",
+  quiz: process.env.LLM_MODEL_QUIZ || "openai/gpt-3.5-turbo",
 } as const;
 
 // ============ 共享类型 ============
