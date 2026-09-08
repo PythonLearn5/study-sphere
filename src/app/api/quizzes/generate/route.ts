@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { LLM_DISABLED, LLM_MODELS, llmClient } from '@/lib/llm'
+import { LLM_MODELS, LLM_BASE_URL_USED, runChatCompletionJSON, ChatMessage } from '@/lib/llm'
 
 interface QuizGenerationRequest {
   studyMaterial: string
@@ -19,29 +19,24 @@ interface Question {
 export async function POST(request: NextRequest) {
   try {
     const body: QuizGenerationRequest = await request.json()
-    
     const { studyMaterial, numberOfQuestions, difficulty, quizType } = body
 
     if (!studyMaterial) {
+      return NextResponse.json({ error: 'Study material is required' }, { status: 400 })
+    }
+
+    if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
       return NextResponse.json(
-        { error: 'Study material is required' },
-        { status: 400 },
+        {
+          error: 'LLM 未配置',
+          details: '请在 .env.local 配置 LLM_API_KEY 或 GROQ_API_KEY，然后重启 dev 服务器。',
+          baseURL: LLM_BASE_URL_USED,
+        },
+        { status: 503 },
       )
     }
 
-    let questions: Question[]
-
-    if (!LLM_DISABLED && llmClient) {
-      try {
-        questions = await generateAIQuestions(body)
-      } catch (error) {
-        console.error('AI generation failed, using fallback:', error)
-        questions = generateSampleQuestions(studyMaterial, numberOfQuestions, difficulty, quizType)
-      }
-    } else {
-      console.log('No LLM client provided (DISABLE_LLM or missing API key), using fallback questions')
-      questions = generateSampleQuestions(studyMaterial, numberOfQuestions, difficulty, quizType)
-    }
+    const questions = await generateAIQuestions(body)
 
     return NextResponse.json({
       success: true,
@@ -50,21 +45,32 @@ export async function POST(request: NextRequest) {
         difficulty,
         quizType,
         numberOfQuestions: questions.length,
-        aiGenerated: !LLM_DISABLED && !!llmClient,
+        aiGenerated: true,
       },
     })
-  } catch (error) {
-    console.error('Error generating quiz:', error)
+  } catch (error: any) {
+    console.error('Error generating quiz ⚠️ :', {
+      name: error?.name,
+      message: error?.message,
+      status: error?.status,
+      cause: error?.cause?.message ?? undefined,
+      stack: error?.stack?.split('\n').slice(0, 6).join('\n'),
+    })
     return NextResponse.json(
-      { error: 'Failed to generate quiz' },
+      {
+        error: 'Failed to generate quiz',
+        details: error?.message || 'Unknown error',
+        baseURL: LLM_BASE_URL_USED,
+        model: LLM_MODELS.quiz,
+      },
       { status: 500 },
     )
   }
 }
 
 async function generateAIQuestions(request: QuizGenerationRequest): Promise<Question[]> {
-  if (LLM_DISABLED || !llmClient) {
-    throw new Error('AI service not available')
+  if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
+    throw new Error('LLM client not available')
   }
 
   const { studyMaterial, numberOfQuestions, difficulty, quizType } = request
@@ -95,76 +101,23 @@ Format your response as a JSON array with this structure:
 
 Make sure the questions test understanding of the key concepts in the study material.`
 
-  try {
-    const completion = await llmClient.chat.completions.create({
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      model: LLM_MODELS.quiz,
-      temperature: 0.7,
-      max_tokens: 4000,
-    })
+  const { content: response } = await runChatCompletionJSON({
+    messages: [{ role: 'user', content: prompt }],
+    model: LLM_MODELS.quiz,
+    temperature: 0.7,
+    max_tokens: 4000,
+  })
 
-    const response = completion.choices[0]?.message?.content
-    if (!response) {
-      throw new Error('No response from AI')
-    }
-
-    const jsonMatch = response.match(/\[[\s\S]*\]/)
-    if (jsonMatch) {
-      const questions = JSON.parse(jsonMatch[0])
-      return questions
-    } else {
-      console.warn('Failed to parse AI response as JSON, using fallback')
-      return generateSampleQuestions(studyMaterial, numberOfQuestions, difficulty, quizType)
-    }
-  } catch (error) {
-    console.error('AI generation failed:', error)
-    return generateSampleQuestions(studyMaterial, numberOfQuestions, difficulty, quizType)
+  if (!response) {
+    throw new Error('No response from AI (empty content)')
   }
-}
 
-function generateSampleQuestions(studyMaterial: string, numberOfQuestions: number, difficulty: string, quizType: string): Question[] {
-  const words = studyMaterial.toLowerCase().split(/\s+/)
-  const keyWords = words.filter(word => 
-    word.length > 4 && 
-    !['this', 'that', 'with', 'from', 'they', 'were', 'been', 'have', 'will', 'would', 'could', 'should', 'about', 'their', 'there', 'these', 'those'].includes(word)
-  ).slice(0, 10)
-
-  const questions: Question[] = []
-  
-  for (let i = 0; i < numberOfQuestions; i++) {
-    const questionNumber = i + 1
-    const keyWord = keyWords[i % keyWords.length] || 'topic'
-    
-    if (quizType === 'true-false' || (quizType === 'mixed' && i % 2 === 0)) {
-      const isTrue = Math.random() > 0.5
-      questions.push({
-        question: `Based on the study material, is the following statement about ${keyWord} ${isTrue ? 'correct' : 'incorrect'}?`,
-        options: ['True', 'False'],
-        correctOption: isTrue ? 'True' : 'False',
-      })
-    } else {
-      const correctAnswer = `The correct answer about ${keyWord}`
-      const incorrectAnswers = [
-        `An incorrect option about ${keyWord}`,
-        `Another wrong answer regarding ${keyWord}`,
-        `A false statement about ${keyWord}`,
-      ]
-      
-      const allOptions = [correctAnswer, ...incorrectAnswers]
-      const shuffledOptions = allOptions.sort(() => Math.random() - 0.5)
-      
-      questions.push({
-        question: `What is the most accurate statement about ${keyWord} based on the study material?`,
-        options: shuffledOptions,
-        correctOption: correctAnswer,
-      })
-    }
+  const jsonMatch = response.match(/\[[\s\S]*\]/)
+  if (jsonMatch) {
+    const parsed = JSON.parse(jsonMatch[0]) as Question[]
+    if (!Array.isArray(parsed)) throw new Error('AI response is not a JSON array')
+    return parsed
   }
-  
-  return questions
+
+  throw new Error('AI response does not contain valid JSON array of questions')
 }

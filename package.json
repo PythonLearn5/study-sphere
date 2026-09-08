@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "clean": "node -e \"const fs=require('fs'),p=['.next','node_modules/.cache','.turbo'];for(const d of p){if(fs.existsSync(d)){fs.rmSync(d,{recursive:true,force:true});console.log('Deleted: '+d)}}\"",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "db:generate": "drizzle-kit generate",

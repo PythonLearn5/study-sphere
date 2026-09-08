@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { LLM_DISABLED, LLM_MODELS, llmClient } from '@/lib/llm'
+import { LLM_MODELS, LLM_BASE_URL_USED, runChatCompletionJSON, ChatMessage } from '@/lib/llm'
 
 interface FlowchartGenerationRequest {
   concept: string
@@ -8,18 +8,18 @@ interface FlowchartGenerationRequest {
 }
 
 async function generateMermaidWithAI(concept: string, chartType: string, complexity: string): Promise<string> {
-  if (LLM_DISABLED || !llmClient) {
-    // 开发模式下，直接返回降级流程图
-    return generateFallbackCode(concept, chartType, complexity, true)
+  if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
+    throw new Error(
+      'LLM client 未初始化：请配置 LLM_API_KEY 或 GROQ_API_KEY。' +
+        `当前 BaseURL=${LLM_BASE_URL_USED}，model=${LLM_MODELS.flowchart}`,
+    )
   }
 
   const prompt = createPromptForChartType(concept, chartType, complexity)
-  
-  const completion = await llmClient.chat.completions.create({
-    messages: [
-      {
-        role: 'system',
-        content: `You are an expert at creating Mermaid diagrams. Generate only valid Mermaid syntax without any explanation or markdown formatting. 
+
+  const systemMsg: ChatMessage = {
+    role: 'system',
+    content: `You are an expert at creating Mermaid diagrams. Generate only valid Mermaid syntax without any explanation or markdown formatting. 
 
 For flowcharts, follow this EXACT syntax:
 - Start with "flowchart TD"
@@ -38,28 +38,27 @@ flowchart TD
     D --> END
 
 Ensure all syntax is valid and each node has descriptive text in quotes.`,
-      },
-      {
-        role: 'user', 
-        content: prompt,
-      },
-    ],
+  }
+
+  const userMsg: ChatMessage = { role: 'user', content: prompt }
+
+  const { content: result } = await runChatCompletionJSON({
+    messages: [systemMsg, userMsg],
     model: LLM_MODELS.flowchart,
     temperature: 0.3,
     max_tokens: 1000,
   })
 
-  const result = completion.choices[0]?.message?.content?.trim()
-  if (!result) {
-    throw new Error('No response from AI')
+  if (!result?.trim()) {
+    throw new Error('No response from AI (empty content)')
   }
 
-  return sanitizeMermaidCode(result)
+  return sanitizeMermaidCode(result.trim())
 }
 
 function createPromptForChartType(concept: string, chartType: string, complexity: string): string {
   const basePrompt = `Create a ${complexity} ${chartType} diagram for: "${concept}"`
-  
+
   switch (chartType) {
     case 'flowchart':
       return `${basePrompt}
@@ -139,62 +138,34 @@ Generate ONLY the mermaid code starting with "flowchart TD"`
 }
 
 function sanitizeMermaidCode(code: string): string {
-  // Remove markdown code blocks if present
   let cleaned = code.replace(/```mermaid\n?/g, '').replace(/```\n?/g, '')
-  
-  // Remove any extra whitespace
   cleaned = cleaned.trim()
-  
-  // Fix common Mermaid syntax errors
   cleaned = cleaned
-    // Fix invalid start/end node syntax ((text)) -> START([text])
     .replace(/\(\(([^)]+)\)\)/g, (match, text) => {
-      if (text.toLowerCase().includes('start')) {
-        return 'START(["Start"])'
-      } else if (text.toLowerCase().includes('end')) {
-        return 'END(["End"])'
-      } else {
-        return `NODE(["${text}"])`
-      }
+      if (text.toLowerCase().includes('start')) return 'START(["Start"])'
+      if (text.toLowerCase().includes('end')) return 'END(["End"])'
+      return `NODE(["${text}"])`
     })
-    // Fix line breaks around arrows - put everything on one line
     .replace(/\n\s*-->/g, ' -->')
     .replace(/-->\s*\n/g, ' --> ')
-    // Fix proper line breaks after complete connections
     .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
     .join('\n')
-  
-  // Ensure it starts with the correct diagram type
+
   if (!cleaned.match(/^(flowchart|sequenceDiagram|classDiagram|stateDiagram|mindmap|timeline)/)) {
-    // If it doesn't start correctly, try to fix it
     if (cleaned.includes('flowchart')) {
       cleaned = 'flowchart TD\n' + cleaned.split('\n').slice(1).join('\n')
     }
   }
-  
   return cleaned
-}
-
-function generateFallbackCode(concept: string, chartType: string, complexity: string, mocked = false): string {
-  const safeConcept = concept.replace(/[^\w\s-]/g, '').trim().substring(0, 50)
-  const prefix = mocked
-    ? '%% [开发模式 Mock 流程图 - 请配置 LLM_API_KEY/LLM_BASE_URL 获取真实 AI 生成结果]\n'
-    : ''
-  return (
-    prefix +
-    `flowchart TD
-    A["Start: ${safeConcept}"] --> B["Process"]
-    B --> C["End"]`
-  )
 }
 
 export async function POST(req: NextRequest) {
   let concept = ''
   let chartType = 'flowchart'
   let complexity = 'simple'
-  
+
   try {
     const body = await req.json()
     concept = body.concept || ''
@@ -209,25 +180,31 @@ export async function POST(req: NextRequest) {
     }
 
     const mermaidCode = await generateMermaidWithAI(concept, chartType, complexity)
-    
+
     return NextResponse.json({
       success: true,
       mermaidCode,
       chartType,
       concept,
     })
-  } catch (error) {
-    console.error('Error generating flowchart:', error)
-    
-    const fallbackCode = generateFallbackCode(concept || 'process', chartType, complexity)
-    return NextResponse.json({
-      success: true,
-      mermaidCode: fallbackCode,
-      chartType,
-      concept: concept || 'process',
-      warning: 'AI generation failed, using template fallback',
+  } catch (error: any) {
+    console.error('Error generating flowchart ⚠️ :', {
+      name: error?.name,
+      message: error?.message,
+      status: error?.status,
+      statusCode: error?.statusCode,
+      cause: error?.cause?.message ?? undefined,
+      stack: error?.stack?.split('\n').slice(0, 6).join('\n'),
     })
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to generate flowchart',
+        details: error?.message || 'Unknown error',
+        baseURL: LLM_BASE_URL_USED,
+        model: LLM_MODELS.flowchart,
+      },
+      { status: 500 },
+    )
   }
 }
-
-

@@ -1,19 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Groq from 'groq-sdk'
-import { LLM_DISABLED, LLM_MODELS, llmClient } from '@/lib/llm'
+import { LLM_MODELS, LLM_BASE_URL_USED, runChatCompletionJSON, ChatMessage } from '@/lib/llm'
 
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
+      return NextResponse.json(
+        {
+          error: 'LLM 未配置',
+          details: '请在 .env.local 配置 LLM_API_KEY 或 GROQ_API_KEY，然后重启 dev 服务器。',
+          baseURL: LLM_BASE_URL_USED,
+        },
+        { status: 503 },
+      )
+    }
+
     const { studyMaterial, numberOfCards, difficulty, focusArea } = await request.json()
 
     if (!studyMaterial?.trim()) {
       return NextResponse.json(
         { error: 'Study material is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    // Create a prompt for flashcard generation
     const prompt = `You are an expert educational content creator. Create ${numberOfCards} high-quality flashcards based on the following study material. 
 
 Study Material:
@@ -44,48 +53,36 @@ Return your response as a JSON object with the following structure:
 
 Make sure the JSON is valid and contains exactly ${numberOfCards} flashcards.`
 
-    let content: string
-    if (LLM_DISABLED || !llmClient) {
-      content = JSON.stringify({
-        flashcards: Array.from({ length: Math.min(numberOfCards, 5) }, (_, i) => ({
-          question: `闪卡示例 ${i + 1}：关于 "${studyMaterial.slice(0, 30)}" 的问题`,
-          answer: `这是 mock 回复（DISABLE_LLM=true 或未配置 API Key）。\n实际部署并配置好 LLM_API_KEY/LLM_BASE_URL 后会生成真实闪卡内容。`,
-          topic: focusArea || 'General',
-          tags: ['mock', 'development'],
-          audioReadableAnswer: '这是开发模式下的示例答案。',
-        })),
-      })
-    } else {
-      const completion = await llmClient.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert educational content creator specializing in creating effective flashcards for learning. Always respond with valid JSON only. Make answers suitable for text-to-speech reading.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        model: LLM_MODELS.smart,
-        temperature: 0.7,
-        max_tokens: 4000,
-        response_format: { type: 'json_object' },
-      })
+    const messages: ChatMessage[] = [
+      {
+        role: 'system',
+        content:
+          'You are an expert educational content creator specializing in creating effective flashcards for learning. Always respond with valid JSON only. Make answers suitable for text-to-speech reading.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ]
 
-      content = completion.choices[0]?.message?.content || ''
-    }
+    const { content } = await runChatCompletionJSON({
+      messages,
+      model: LLM_MODELS.smart,
+      temperature: 0.7,
+      max_tokens: 4000,
+      response_format: { type: 'json_object' },
+    })
 
     if (!content) {
-      throw new Error('No response from AI')
+      throw new Error('No response from AI (empty content)')
     }
 
     let flashcardsData
     try {
       flashcardsData = JSON.parse(content)
     } catch (parseError) {
-      console.error('Failed to parse AI response:', content)
-      throw new Error('Invalid response format from AI')
+      console.error('Failed to parse AI response (first 500 chars):', content.slice(0, 500))
+      throw new Error('Invalid JSON response from AI')
     }
 
     if (!flashcardsData.flashcards || !Array.isArray(flashcardsData.flashcards)) {
@@ -100,7 +97,6 @@ Make sure the JSON is valid and contains exactly ${numberOfCards} flashcards.`
       if (!card.question || !card.answer) {
         throw new Error(`Flashcard ${index + 1} is missing question or answer`)
       }
-      
       return {
         id: `card-${Date.now()}-${index}`,
         question: card.question.trim(),
@@ -120,23 +116,34 @@ Make sure the JSON is valid and contains exactly ${numberOfCards} flashcards.`
         generatedAt: new Date().toISOString(),
       },
     })
-  } catch (error) {
-    console.error('Error generating flashcards:', error)
-    
-    if (error instanceof Error && error.message.includes('model')) {
+  } catch (error: any) {
+    console.error('Error generating flashcards ⚠️ :', {
+      name: error?.name,
+      message: error?.message,
+      status: error?.status,
+      statusCode: error?.statusCode,
+      cause: error?.cause?.message ?? undefined,
+      stack: error?.stack?.split('\n').slice(0, 6).join('\n'),
+    })
+
+    if (error?.message?.includes('model')) {
       return NextResponse.json(
-        { 
+        {
           error: 'AI model temporarily unavailable',
-          details: 'The AI service is currently updating. Please try again in a moment.',
+          details: error?.message,
+          baseURL: LLM_BASE_URL_USED,
+          model: LLM_MODELS.smart,
         },
         { status: 503 },
       )
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to generate flashcards',
-        details: error instanceof Error ? error.message : 'Unknown error occurred',
+        details: error?.message || 'Unknown error',
+        baseURL: LLM_BASE_URL_USED,
+        model: LLM_MODELS.smart,
       },
       { status: 500 },
     )

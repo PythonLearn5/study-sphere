@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { LLM_DISABLED, LLM_MODELS, llmClient } from '@/lib/llm'
+import { LLM_MODELS, LLM_BASE_URL_USED, runChatCompletionJSON, ChatMessage } from '@/lib/llm'
 
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY && !process.env.GROQ_API_KEY) {
+      return NextResponse.json(
+        {
+          error: 'LLM 未配置',
+          details: '请在 .env.local 配置 LLM_API_KEY 或 GROQ_API_KEY，然后重启 dev 服务器。',
+          baseURL: LLM_BASE_URL_USED,
+        },
+        { status: 503 },
+      )
+    }
+
     const { flashcard, userQuestion, studyMaterial } = await request.json()
 
     if (!flashcard || !userQuestion) {
@@ -33,47 +44,46 @@ Please provide a helpful, educational explanation that:
 
 Keep your response concise but informative (2-3 paragraphs maximum).`
 
-    let explanation: string
-    if (LLM_DISABLED || !llmClient) {
-      explanation =
-        `🤖 [开发模式 Mock 讲解]\n\n你问的是："${userQuestion}"\n\n` +
-        `当前闪卡主题：${flashcard.topic || '未分类'}。\n` +
-        `配置好 LLM_API_KEY / LLM_BASE_URL 并去掉 DISABLE_LLM=true 后，这里会由 AI 生成真实讲解。`
-    } else {
-      const completion = await llmClient.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a knowledgeable and patient tutor. Provide clear, helpful explanations that enhance student understanding.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        model: LLM_MODELS.fast,
-        temperature: 0.7,
-        max_tokens: 500,
-      })
+    const messages: ChatMessage[] = [
+      {
+        role: 'system',
+        content:
+          'You are a knowledgeable and patient tutor. Provide clear, helpful explanations that enhance student understanding.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ]
 
-      explanation = completion.choices[0]?.message?.content || ''
-    }
+    const { content: explanation } = await runChatCompletionJSON({
+      messages,
+      model: LLM_MODELS.fast,
+      temperature: 0.7,
+      max_tokens: 500,
+    })
 
     if (!explanation) {
-      throw new Error('No explanation generated')
+      throw new Error('No explanation generated (empty content from AI)')
     }
 
     return NextResponse.json({
       explanation: explanation.trim(),
     })
-  } catch (error) {
-    console.error('Error generating explanation:', error)
-        
+  } catch (error: any) {
+    console.error('Error generating explanation ⚠️ :', {
+      name: error?.name,
+      message: error?.message,
+      status: error?.status,
+      cause: error?.cause?.message ?? undefined,
+      stack: error?.stack?.split('\n').slice(0, 6).join('\n'),
+    })
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to generate explanation',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: error?.message || 'Unknown error',
+        baseURL: LLM_BASE_URL_USED,
+        model: LLM_MODELS.fast,
       },
       { status: 500 },
     )
