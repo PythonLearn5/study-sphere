@@ -1,8 +1,8 @@
-# Study Sphere 聊天 & CopilotKit 测试步骤与样例
+# Study Sphere 聊天 & CopilotKit 测试指南
 
-> 文档分两部分：
-> 1. **聊天部分（主路径 / 推荐日常使用）**：`/dashboard/chat` 页面 + `/api/chat/completion` 流式接口
-> 2. **CopilotKit 部分（备用 / 底层 Agent 能力）**：`/api/copilotkit` 端点 + 握手探测 + OpenAIAdapter
+> 本文档覆盖两条 AI 链路的测试方法：
+> 1. **自研聊天**：`/dashboard/chat` 页面 + `/api/chat/completion` 流式 SSE 接口
+> 2. **CopilotKit 气泡**：右下角悬浮气泡 + `/api/copilotkit` Runtime 端点 + AI 工具端点
 
 相关文件索引：
 - 聊天前端：[dashboard/chat/page.tsx](../src/app/dashboard/chat/page.tsx)
@@ -10,25 +10,38 @@
 - 聊天历史 CRUD：[api/chats/route.ts](../src/app/api/chats/route.ts)
 - 统一 LLM 调用层：[lib/llm.ts](../src/lib/llm.ts)
 - CopilotKit 运行时：[api/copilotkit/route.ts](../src/app/api/copilotkit/route.ts)
-- 握手端点：由 [api/copilotkit/route.ts](../src/app/api/copilotkit/route.ts)（Hono single-route）自动处理 `/info`，已删除独立 info stub 文件
-- Dashboard Provider（当前已启用）：[dashboard/layout.tsx](../src/app/dashboard/layout.tsx) — useSingleEndpoint=true + agents__unsafe_dev_only 注册 HttpAgent(keys=[default]) + CopilotPopup 悬浮气泡
+- Dashboard Provider：[dashboard/layout.tsx](../src/app/dashboard/layout.tsx)
+- 闪卡 AI 生成：[api/copilotkit/generate-flashcards/route.ts](../src/app/api/copilotkit/generate-flashcards/route.ts)
+- 闪卡 AI 讲解：[api/copilotkit/explain-flashcard/route.ts](../src/app/api/copilotkit/explain-flashcard/route.ts)
+- 流程图 AI 生成：[api/generate-flowchart/route.ts](../src/app/api/generate-flowchart/route.ts)
 - 环境变量示例：[.env.local](../.env.local) / [.env.local.example](../.env.local.example)
 
 ---
 
-## 一、聊天部分（Study Sphere Chat · 主路径）
+## 目录
 
-### 1.1 前置条件 & 环境检查清单
+- [一、前置条件 & 环境配置](#一前置条件--环境配置)
+- [二、自研聊天测试](#二自研聊天测试)
+- [三、CopilotKit 气泡测试](#三copilotkit-气泡测试)
+- [四、AI 工具端点测试](#四ai-工具端点测试)
+- [五、CopilotKit Hooks 测试](#五copilotkit-hooks-测试)
+- [六、快速自检 Checklist](#六快速自检-checklist)
 
-在测试前，先确认 `.env.local` 满足：
+---
+
+## 一、前置条件 & 环境配置
+
+### 1.1 .env.local 配置
 
 ```env
-# 1) 自定义 Base（本项目走 Vercel AI Gateway，推荐）
+# Base URL（本项目走 Vercel AI Gateway）
 LLM_BASE_URL=https://ai-gateway.vercel.sh/v1
-LLM_API_KEY=vck_XXXXXXXXXXXXXXXXXXXXXXXXXX         # Vercel AI Gateway Key（vck_ 开头）
-OPENAI_API_KEY=vck_XXXXXXXXXXXXXXXXXXXXXXXXXX      # 同上，兼容别名
 
-# 模型名：Vercel Gateway 必须是 provider/model，推荐模型如下
+# API Key（Vercel AI Gateway Key，必须 vck_ 开头）
+LLM_API_KEY=vck_XXXXXXXXXXXXXXXXXXXXXXXXXX
+OPENAI_API_KEY=vck_XXXXXXXXXXXXXXXXXXXXXXXXXX   # 兼容别名，同上
+
+# 模型名（Vercel Gateway 必须是 provider/model 格式）
 LLM_MODEL_CHAT=openai/gpt-4o-mini
 LLM_MODEL_FAST=openai/gpt-4o-mini
 LLM_MODEL_SMART=openai/gpt-3.5-turbo
@@ -36,318 +49,331 @@ LLM_MODEL_FLOWCHART=openai/gpt-4o-mini
 LLM_MODEL_QUIZ=openai/gpt-3.5-turbo
 ```
 
-启动后在 **Node 终端** 观察这一行：
+**关键点**：
+- Key 必须是 `vck_` 开头的 Vercel AI Gateway Key（不是 Vercel 个人 Account Token）
+- 模型名必须 `provider/model` 格式（如 `openai/gpt-4o-mini`，纯模型名 `gpt-4o-mini` 会 404）
+- 改完 `.env.local` 必须**重启 dev 服务器**（Next.js 不会热加载 env）
 
+### 1.2 启动
+
+```bash
+# 清缓存（有缓存污染时先跑）
+npm run clean
+
+# 启动
+npm run dev
+```
+
+**验证 LLM 初始化**：启动后 Node 终端应出现：
 ```
 [llm] ✅ 已初始化。BaseURL=https://ai-gateway.vercel.sh/v1，自定义 Base=true，
       chat 模型=openai/gpt-4o-mini，smart 模型=openai/gpt-3.5-turbo
 ```
 
-如果看到的是 `⚠️ 未配置 API Key` → 重新检查 `.env.local` 是否保存、并重启 `npm run dev`（改 `.env.local` 必须重启）。
+如果看到 `⚠️ 未配置 API Key` → 检查 `.env.local` 是否保存、重启 dev。
 
-### 1.2 启动开发服务器
+### 1.3 登录
 
-```bash
-# 如果有缓存污染（vendors.js SyntaxError），先清缓存
-npm run clean
+1. 访问 `http://localhost:3000/auth/register` 注册
+2. 或 `http://localhost:3000/auth/login` 登录
+3. 登录后进入 `http://localhost:3000/dashboard`
 
-npm run dev
-```
+---
 
-浏览器访问：
-1. 先注册登录：`http://localhost:3000/auth/register`
-2. 进入聊天页：`http://localhost:3000/dashboard/chat`
+## 二、自研聊天测试
 
-### 1.3 浏览器 UI 测试步骤（逐步）
+> 自研聊天 **不走 CopilotKit**，直接调用 `/api/chat/completion`（纯 SSE）。
 
-| 步骤 | 操作 | 预期结果 | 调试信息（Console / Node 终端） |
-|------|------|---------|------------------------------|
-| 1 | 打开 `/dashboard/chat` | 显示 "What can I help you study?" 标题 + 4 个快捷按钮 + 4 个示例气泡 | Console 不应有红色报错 |
-| 2 | 点任一快捷按钮（如 Essay Help） | 发送区自动填入 "Help me with essay help" 并立刻提交；对话区滚动出来（左边 AI 空气泡 + 右边用户气泡） | Browser Console：`[Chat Debug] send user message: ...`<br>Node 终端：`[api/chat/completion] start userMessages=1 model=...` |
-| 3 | 等待 5~15s | AI 空气泡开始逐字"打字机式"出现文本，最后结束，"发送中"恢复 | Browser：`[Chat Debug] /api/chat/completion status=200 OK ...`<br>Node：`[api/chat/completion] done stream elapsed=XXXms` |
-| 4 | 再发一条中文问题（如："帮我列一个高中物理力学复习计划"） | AI 自动用中文回复；文本逐字流畅出现 | 同上 |
-| 5 | **生成过程中点击 ⬛ 停止按钮** | 立刻停止生成，当前已收到的 token 保留 | Browser：请求 `canceled`<br>Node：AbortError 不报错 |
-| 6 | 点击左下角 **Previous Chats** | 弹出历史对话抽屉，包含刚才发的 2 条问答对 | 抽屉里点单条对应 → 目前不跳转但能看/删除 |
-| 7 | 历史里点 🗑️ 删除某条 | 该条立刻从抽屉里消失 | 后端 `/api/chats DELETE` 返回 2xx |
-| 8 | 顶栏 🗑️（清空 chat）按钮 | 消息列表清空，回到首屏空状态 | — |
+### 2.1 浏览器 UI 测试
 
-### 1.4 用 curl / Postman 直接测 `/api/chat/completion`
+| 步骤 | 操作 | 预期结果 | 调试信息 |
+|------|------|---------|----------|
+| 1 | 打开 `/dashboard/chat` | 显示标题 + 4 个快捷按钮 + 4 个示例气泡 | Console 无红色报错 |
+| 2 | 点快捷按钮（如 Essay Help） | 自动填入消息并提交，出现用户气泡 + AI 空气泡 | Node: `[api/chat/completion] start userMessages=1 ...` |
+| 3 | 等待 5~15s | AI 气泡逐字"打字机式"出现文本 | Node: `[api/chat/completion] done stream elapsed=XXXms` |
+| 4 | 发中文问题（如"帮我列一个物理复习计划"） | AI 自动用中文回复，逐字流畅 | 同上 |
+| 5 | 生成中点 ⬛ 停止 | 立刻停止，已收到的 token 保留 | Browser: 请求 `canceled`; Node: AbortError 不报错 |
+| 6 | 点左下角 Previous Chats | 弹出历史抽屉，包含问答对 | — |
+| 7 | 删除某条历史 | 从抽屉消失 | `DELETE /api/chats` 返回 2xx |
+| 8 | 点顶栏 🗑️ 清空 | 消息列表清空，回到首屏 | — |
 
-因为 AI 调用可能受 UI 状态、登录态 Cookie 影响，"先把接口调通再测 UI"是更快的排错套路。
-
-#### 样例 A：非流式（先跑这个，失败时信息最全）
-
-PowerShell：
+### 2.2 curl 测试 — 非流式（先跑这个排错）
 
 ```powershell
 $body = @{
   messages = @(
-    @{ role = "user"; content = "请给我 3 个提高英语阅读理解的方法，用中文回答" }
+    @{ role = "user"; content = "请给我 3 个提高英语阅读理解的方法" }
   )
   stream = $false
 } | ConvertTo-Json -Depth 5
 
-# 注意：实际部署里接口需要登录 Cookie。测试接口前先在浏览器里登录一下，
-# 然后用 DevTools Network 复制任意 dashboard 请求的 Cookie 作为 -Headers @{ Cookie="..." }
+# 注意：接口需要登录 Cookie。先在浏览器登录，然后从 DevTools 复制 Cookie
 Invoke-RestMethod -Method Post `
   -Uri "http://localhost:3000/api/chat/completion" `
   -ContentType "application/json" `
-  -Body $body
+  -Body $body `
+  -Headers @{ Cookie = "your-cookie-here" }
 ```
 
-##### 成功时响应样例 (HTTP 200 JSON)
-
+**成功响应 (HTTP 200)**：
 ```json
 {
-  "content": "1. 先读题目再看文章；2. 记每段主旨句；3. 陌生词先结合上下文猜、再查词典……",
+  "content": "1. 先读题目再看文章；2. 记每段主旨句；3. 陌生词先结合上下文猜…",
   "model": "openai/gpt-4o-mini",
   "elapsedMs": 3820,
   "baseURL": "https://ai-gateway.vercel.sh/v1"
 }
 ```
 
-##### 典型失败响应样例（接口会原样打印 Vercel Gateway 的真实错误）
-
-| 错误场景 | 典型 status / message | 排查建议 |
-|---------|----------------------|---------|
-| Token 错 / 过期 | 401 `Invalid authentication token` | 去 Vercel → Dashboard → AI → AI Gateway → Keys 重新生成一个 `vck_` 开头的 key（注意不是 Vercel 个人 Account Token） |
-| 模型名错 | 404 `The requested resource was not found: /v1/chat/completions` 或 `model not found` | 必须 `provider/model`，例如 `openai/gpt-4o-mini`，纯模型名 `gpt-4o-mini` 不认识 |
-| 速率限制 | 429 `Rate limited` / `You exceeded your current quota` | 等 1 分钟再试，或升级 Vercel 额度 |
-| Provider Billing 未绑 | 如 `openai provider is not configured` | `openai/*` / `anthropic/*` 都需要 Vercel AI Gateway 后台绑定对应 Provider 的 Billing |
-| 自定义 Base 路径拼错（修过的 bug） | 旧错误：`/v1/openai/v1/chat/completions 404` | 用新版本的 [lib/llm.ts](../src/lib/llm.ts) 自定义 Base 原生 fetch 分支，不会再加 `/openai/v1` |
-
-#### 样例 B：流式 SSE（打字机效果）
+### 2.3 curl 测试 — 流式 SSE
 
 ```powershell
-# 在 PowerShell 中写一个简单监听脚本，观察 server 推送
 $body = @{
   messages = @(@{ role = "user"; content = "1+1=?" })
   stream = $true
 } | ConvertTo-Json -Depth 5
 
-# 推荐用 curl.exe（Windows 自带），更直观看到 data: 帧
 curl.exe -N -X POST "http://localhost:3000/api/chat/completion" `
   -H "Content-Type: application/json" `
+  -H "Cookie: your-cookie-here" `
   --data $body
 ```
 
-##### 流式帧格式（SSE）
-
-服务端会逐帧推送 `data: { JSON }\n\n`：
-
+**SSE 帧格式**：
 ```
-: ping
+: ping                          ← 心跳帧（防超时）
 
-data: {"type":"delta","delta":"2"}
+data: {"type":"delta","delta":"2"}        ← 增量 token
 
 data: {"type":"delta","delta":"。"}
 
 data: {"type":"done","model":"openai/gpt-4o-mini","elapsedMs":820,"finalContent":"2。"}
-```
 
-错误时会推 `type=error`：
-
-```
 data: {"type":"error","name":"HTTPError","message":"Invalid authentication token","status":401}
 ```
 
-### 1.5 聊天历史 API（`/api/chats`）样例
+### 2.4 常见错误排查
 
-| 方法 | 用途 | 样例 Body | 响应 |
-|------|------|----------|------|
-| `GET /api/chats` | 取当前登录用户的所有历史问答对 | — | `[{id, prompt, response, createdAt}, ...]` |
-| `POST /api/chats` | 保存一条问答对（UI 里对话结束后会自动调用） | `{ "prompt": "...", "response": "..." }` | `{ "success": true, "chat": {...} }` |
-| `DELETE /api/chats` | 删除一条历史 | `{ "id": "<chat_id>" }` | `{ "success": true }` |
-
-### 1.6 故障排查思路（按优先级）
-
-1. **接口直连测不通？** → 用 1.4 的非流式 curl 先排除：是 Token / 模型名 / Vercel Billing / 网络 哪一层的问题。
-2. **接口通但 UI 没渲染？** → 看 Console：
-   - `/api/chat/completion status=200 OK` → 说明网络好，继续看是否收到了 `type: delta` 帧。
-   - 不是 200 → 直接点开 Network 看响应体，内容通常就是 Vercel Gateway 原话。
-3. **流式首帧慢** → 看 Node 里 `elapsedMs`，如果整体超过 20s 仍未结束但 Token 还在推，说明是 provider 本身慢；SSE 帧首加了 `: ping\n\n`，浏览器不会判死。
-4. **Cookie 失效报 302 / 401** → 重新登录一次 `/auth/login`。
+| 错误场景 | 状态码 / 消息 | 排查建议 |
+|---------|--------------|---------|
+| Token 错/过期 | 401 `Invalid authentication token` | Vercel → Dashboard → AI → AI Gateway → Keys 重新生成 `vck_` 开头的 key |
+| 模型名错 | 404 `model not found` | 必须 `provider/model`，如 `openai/gpt-4o-mini` |
+| 速率限制 | 429 `Rate limited` | 等 1 分钟再试 |
+| Provider Billing 未绑 | `openai provider is not configured` | Vercel AI Gateway 后台绑定对应 Provider Billing |
+| Cookie 失效 | 302 / 401 | 重新登录 `/auth/login` |
 
 ---
 
-## 二、CopilotKit 部分（备用 / 底层 Agent）
+## 三、CopilotKit 气泡测试
 
-> ⚠️ 说明：主聊天（/dashboard/chat）**仍然不走 CopilotKit**，它直接调用 /api/chat/completion。
-> CopilotKit 目前使用场景：
-> - 右下角悬浮气泡 CopilotPopup（通过 CopilotKit Provider + useSingleEndpoint + 注册 @ag-ui/client HttpAgent）。
-> - 闪卡 AI 生成接口 /api/copilotkit/generate-flashcards 仍在此目录下（但它现在只复用 LLM 层，不通过 CopilotRuntime）。
-> - 握手探测 GET /api/copilotkit/info 已由 single-route 自动托管，**不再需要独立 info stub 文件**（已删除），也不会再 404 刷屏。
+> CopilotKit 气泡通过 Provider + `/api/copilotkit` 端点工作，使用 Fake OpenAI Client 桥接到 `lib/llm.ts`。
 
-### 2.1 架构关系图
+### 3.1 启动验证
+
+进入任一 dashboard 页面后，检查 Node 终端：
 
 ```
-  ┌──────────────────────────────────────────────────────────┐
-  │ Dashboard 页面                                            │
-  │ ┌─────────────────────┐   ┌────────────────────────────┐ │
-  │ │  /dashboard/chat    │   │  未来可能恢复的 CopilotKit  │ │
-  │ │  (自己 useState+SSE)│   │  Provider + CopilotPopup   │ │
-  │ └──────────┬──────────┘   └──────────────┬─────────────┘ │
-  └────────────┼─────────────────────────────┼───────────────┘
-               │  POST /api/chat/completion  │  POST /api/copilotkit
-               ▼                             ▼
-     聊天后端 (route.ts)              CopilotRuntime
-     调用 runChatCompletionStream      OpenAIAdapter
-               │                             │
-               └──────────────┬──────────────┘
-                              ▼
-                    统一 LLM 层 (lib/llm.ts)
-                    自定义 Base (Vercel AI Gateway) → 原生 fetch
-                    OpenAI 兼容协议
-                              │
-                              ▼
-               Vercel AI Gateway / OpenAI 兼容后端
+[CopilotKit route] ✅ ServiceAdapter 构建完成：baseURL=https://ai-gateway.vercel.sh/v1 model=openai/gpt-4o-mini
 ```
 
-### 2.2 当前 CopilotKit Provider 配置（已启用）
-Provider 已在 [dashboard/layout.tsx](../src/app/dashboard/layout.tsx#L30-L36) 配置完成并启用，关键 props 如下：
-- `useSingleEndpoint={true}`：CopilotKit v1.9+ 修复 Agent 'default' not found 必须项（告诉前端只走单一后端端点，不再额外请求 runtime 元信息）。
-- `agents__unsafe_dev_only={{ default: new HttpAgent({ description, url: "/api/copilotkit" }) }}`：通过 @ag-ui/client 的 HttpAgent 显式注册 agent key=`default`，name 不需要在构造参数里传（key 就是 agent name）。
-- 组件：<CopilotPopup defaultOpen={false} labels={{ title, initial, placeholder }} clickOutsideToClose={true} />
-- 如需关闭气泡：删除 layout.tsx 里 <CopilotPopup/> 这一行即可（Provider 保留不影响性能）。
+如果看到 `❌ buildServiceAdapter failed` → API Key 未配置，回到 1.1 检查。
 
-每次进 dashboard 任一页面，会自动走 single-route 模式：**不再单独发 GET /api/copilotkit/info**（由后端 single-route 内自动处理），发送消息走 POST /api/copilotkit（Hono 托管）。
+### 3.2 气泡 UI 测试
 
-### 2.3 测握手探测（`GET /api/copilotkit/info`）
+| 步骤 | 操作 | 预期结果 | 调试信息 |
+|------|------|---------|----------|
+| 1 | 进入 `/dashboard` 任一页面 | 右下角出现悬浮按钮 | Console 无红色报错 |
+| 2 | 点击按钮 | 展开气泡，标题"Study Sphere AI 助手" | — |
+| 3 | 输入"你好"并发送 | AI 逐字流式回复中文 | Node: `[CopilotKit ...] process start userMessages=1 ...` |
+| 4 | 等待回复完成 | 回复完整显示，气泡输入框恢复可用 | Node: `[CopilotKit ...] process done` |
+| 5 | 点气泡外部 | 气泡关闭 | `clickOutsideToClose={true}` 生效 |
 
-> ℹ️ 自切换到 Hono single-route 模式后，/info 端点已与 POST /api/copilotkit 合并在同一 Route Handler 文件（api/copilotkit/route.ts）内自动托管，**不再有独立的 src/app/api/copilotkit/info/route.ts 文件**（已删除）。如果你本地还看到 404，请先执行 npm run clean 清 .next 缓存并重启。
+### 3.3 错误场景验证
+
+| 场景 | 操作 | 预期 |
+|------|------|------|
+| API Key 无效 | `.env.local` 写错 key → 重启 → 发消息 | 气泡显示错误消息（SafeAdapter 推送），不会 `isLoading` 卡死 |
+| 模型名错 | 改成不存在的模型名 → 重启 → 发消息 | 同上，Node 终端打印详细错误对象 |
+
+**SafeAdapter 错误日志格式**：
+```
+[CopilotKit OpenAIAdapter(Vercel-Gateway·FakeClient)] process error ⚠️ : {
+  name: 'HTTPError',
+  message: 'Invalid authentication token',
+  status: 401,
+  body: '{ "error": {...} }'
+}
+```
+
+### 3.4 握手端点验证
+
+`useSingleEndpoint={true}` 使 info 和 POST 走同一 URL，不再有独立 `/info` 文件。
 
 ```bash
 curl.exe http://localhost:3000/api/copilotkit/info
 ```
 
-**预期响应 (HTTP 200)：**
-```json
-{
-  "protocol": "copilotkit-http",
-  "version": "1.0.0",
-  "capabilities": { "actions": false, "agents": false, "chat": false },
-  "agents": [],
-  "actions": []
-}
+预期返回 200 JSON（由 `copilotRuntimeNextJSAppRouterEndpoint` 自动托管）。
+
+如果出现 404 → 运行 `npm run clean` 清 `.next` 缓存并重启。
+
+---
+
+## 四、AI 工具端点测试
+
+> 这些端点路径在 `/api/copilotkit/*` 下，但它们是普通 JSON 接口，与 CopilotKit GraphQL 协议解耦。
+
+### 4.1 生成闪卡
+
+```powershell
+$body = @{
+  studyMaterial = "Photosynthesis is the process used by plants to convert light energy into chemical energy stored in glucose. Chlorophyll captures sunlight. Oxygen is released as a byproduct."
+  numberOfCards = 3
+  difficulty = "beginner"
+  focusArea = "definitions"
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:3000/api/copilotkit/generate-flashcards" `
+  -ContentType "application/json" `
+  -Body $body `
+  -Headers @{ Cookie = "your-cookie-here" }
 ```
 
-如果不做这个 stub，以前的问题就是：
-- Console 刷屏：`GET /api/copilotkit/info 404 (Not Found)`
-- 然后 CopilotKit 判定 Runtime 不可达 → `Runtime did not answer within 5000ms / runtime_info_fetch_failed / no-answer` → 真正聊天请求都还没发就被 Abort。
-
-### 2.4 测 CopilotKit 运行时 POST（`POST /api/copilotkit`）
-
-> CopilotKit 前端协议是 **GraphQL over POST + SSE**（私有格式），通常建议通过 UI 的 CopilotPopup 直接测试；直接手写 body 非常冗长。所以这里给**最低成本验证法**：在前端恢复 Provider 后点侧栏 CopilotPopup 发一句话，然后看 Node 终端的日志。
-
-#### 启用 SafeAdapter 后预期日志
-
-1. 发送消息后 Node 先打：
-   ```
-   [CopilotKit OpenAIAdapter(Vercel-Gateway)] process start userMessages=1 model=openai/gpt-4o-mini baseURL=https://ai-gateway.vercel.sh/v1
-   ```
-2. 成功后打：
-   ```
-   [CopilotKit OpenAIAdapter(Vercel-Gateway)] process done
-   ```
-3. 如果失败（401 / 模型名错 / 429），会打印详细错误对象并仍然 `eventSource.stream(... complete())`，保证前端不会 `isLoading=true` 卡死：
-   ```
-   [CopilotKit OpenAIAdapter(Vercel-Gateway)] process error ⚠️ : {
-     name: 'HTTPError',
-     message: 'Invalid authentication token',
-     status: 401,
-     cause: '...',
-     body: '{ "error": {...} }'
-   }
-   ```
-
-#### 如果 CopilotKit 报 `Code: agent_run_error_event Message: Forbidden`
-
-**排错顺序：**
-1. `.env.local` 的 API Key 是否是 Vercel AI Gateway Key（`vck_` 开头），而不是个人 token。
-2. 模型名是否写成 `openai/...`；如果写 `gpt-4o-mini` 但没绑 OpenAI Billing，也会 Forbidden / model not found。
-3. 用 1.4 节的 `/api/chat/completion` 非流式先把 Token / 模型名跑通。**只要 `/api/chat/completion` 能通，CopilotKit 调 LLM 就一定也能通**，因为它们共用同一层 `lib/llm.ts`（区别只在于 CopilotKit 的 OpenAIAdapter 目前仍用 SDK，出问题时建议直接复用聊天部分的 `runChatCompletionStream` 去改 `serviceAdapter.process`）。
-
-### 2.5 CopilotKit 子目录下的 AI 工具端点（非流式）测试样例
-
-虽然路径挂在 `/api/copilotkit/*`，但它们现在只是普通的 JSON HTTP 接口，与 CopilotKit GraphQL 协议解耦。直接 Postman 调即可。
-
-#### 样例 C：AI 生成闪卡
-
-```http
-POST /api/copilotkit/generate-flashcards
-Content-Type: application/json
-
-{
-  "studyMaterial": "Photosynthesis is the process used by plants, algae and certain bacteria to convert light energy into chemical energy stored in glucose. During photosynthesis, plants absorb carbon dioxide (CO2) from the air and water (H2O) from the soil. Chlorophyll in the leaves captures sunlight. Oxygen is released as a byproduct.",
-  "numberOfCards": 3,
-  "difficulty": "beginner",
-  "focusArea": "definitions"
-}
-```
-
-**成功响应样例：**
+**成功响应**：
 ```json
 {
   "flashcards": [
     {
       "id": "card-1757300000000-0",
       "question": "光合作用的定义是什么？",
-      "answer": "植物、藻类和某些细菌将光能转化为葡萄糖中化学能的过程。",
-      "audioReadableAnswer": "植物、藻类和某些细菌将光能转化为葡萄糖中化学能的过程。",
+      "answer": "植物将光能转化为葡萄糖中化学能的过程。",
+      "audioReadableAnswer": "植物将光能转化为葡萄糖中化学能的过程。",
       "topic": "definitions",
-      "tags": ["photosynthesis","biology"]
-    },
-    { "...": "..." },
-    { "...": "..." }
+      "tags": ["photosynthesis", "biology"]
+    }
   ],
   "metadata": {
     "difficulty": "beginner",
     "focusArea": "definitions",
     "numberOfCards": 3,
-    "generatedAt": "2026-09-08T08:00:00.000Z"
+    "generatedAt": "2026-09-09T08:00:00.000Z"
   }
 }
 ```
 
-#### 样例 D：AI 讲解某张闪卡
+### 4.2 讲解闪卡
 
-```http
-POST /api/copilotkit/explain-flashcard
-Content-Type: application/json
+```powershell
+$body = @{
+  flashcard = @{
+    question = "What is photosynthesis?"
+    answer = "Plants convert light energy into chemical energy (glucose)."
+    topic = "Biology"
+  }
+  userQuestion = "为什么植物需要叶绿素？"
+  studyMaterial = "Chlorophyll in the leaves captures sunlight."
+} | ConvertTo-Json -Depth 5
 
-{
-  "flashcard": {
-    "question": "What is photosynthesis?",
-    "answer": "Plants convert light energy into chemical energy (glucose).",
-    "topic": "Biology"
-  },
-  "userQuestion": "为什么植物需要叶绿素？",
-  "studyMaterial": "Chlorophyll in the leaves captures sunlight."
-}
+Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:3000/api/copilotkit/explain-flashcard" `
+  -ContentType "application/json" `
+  -Body $body `
+  -Headers @{ Cookie = "your-cookie-here" }
 ```
 
-**成功响应样例：**
+**成功响应**：
 ```json
 {
-  "explanation": "叶绿素位于叶片的叶绿体中，它能吸收红光和蓝紫光（主要波段），把阳光的能量"传递"给后续的暗反应……"
+  "explanation": "叶绿素位于叶片的叶绿体中，它能吸收阳光的能量，将其传递给后续的反应……"
 }
 ```
+
+### 4.3 生成流程图
+
+```powershell
+$body = @{
+  concept = "软件开发流程"
+  chartType = "mindmap"
+  complexity = "detailed"
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:3000/api/generate-flowchart" `
+  -ContentType "application/json" `
+  -Body $body `
+  -Headers @{ Cookie = "your-cookie-here" }
+```
+
+**成功响应**：
+```json
+{
+  "success": true,
+  "mermaidCode": "mindmap\n  root((软件开发流程))\n    需求分析\n      用户调研\n      功能定义\n    设计\n      架构设计\n      UI设计\n    开发\n      编码\n      测试\n    部署\n      上线\n      监控",
+  "chartType": "mindmap",
+  "concept": "软件开发流程"
+}
+```
+
+**支持图表类型**：`flowchart` / `sequence` / `class` / `state` / `mindmap` / `timeline`
+
+**复杂度选项**：`simple` / `detailed` / `comprehensive`
 
 ---
 
-## 三、快速自检表格（上线前 checklist）
+## 五、CopilotKit Hooks 测试
 
-| 检查项 | 预期 | 工具 / 方法 |
-|--------|------|------------|
-| `.env.local` LLM_API_KEY 是否是 `vck_` 开头 | 是 | 肉眼 |
-| 5 个模型是否都写成 `provider/model` | 是 | `.env.local` 搜索 `/` 即可 |
-| `GET /api/copilotkit/info` 返回 200 JSON（single-route 自动托管，无独立 stub 文件） | 通过 | curl |
-| `POST /api/chat/completion stream=false` 返回 200 + content 非空 | 通过 | 1.4 样例 A |
-| `/dashboard/chat` 空屏 UI 正常 | 通过 | 浏览器 |
-| `/dashboard/chat` 发消息能逐字渲染 | 通过 | 浏览器 + 看 Node elapsedMs |
-| 生成中点击停止确实能停 | 通过 | 手动点 ⬛ |
-| Previous Chats 能看 / 能删 | 通过 | 浏览器点 2 下抽屉 |
-| `POST /api/copilotkit/generate-flashcards` 能生成 ≥1 张卡 | 通过 | 2.5 样例 C |
-| reCAPTCHA（生产）/ 跳过（开发）配置一致 | 通过 | 注册 / 登录页各走一遍 |
+> CopilotKit Hooks 让气泡 AI 能读取页面状态并触发操作。需要在浏览器中测试。
 
-如果以上 10 项都 ✅，说明**聊天 + CopilotKit 底层 Agent + AI 工具端点**三条链路全部可用。
+### 5.1 useCopilotReadable 测试
+
+| 页面 | 测试方法 | 预期 |
+|------|----------|------|
+| `/dashboard/flashcards` | 气泡问"我现在有几张闪卡？" | AI 能回答数量（从 readable 数据获取） |
+| `/dashboard/flowcharts` | 气泡问"我有哪些流程图？" | AI 列出已有流程图 |
+| `/dashboard/notes` | 气泡问"我的笔记有哪些分类？" | AI 列出分类 |
+| `/dashboard/quizzes` | 气泡问"我有什么测验？" | AI 列出测验 |
+
+### 5.2 useCopilotAction 测试
+
+| 页面 | 气泡输入 | 预期 |
+|------|----------|------|
+| `/dashboard/flashcards` | "帮我生成5张关于光合作用的闪卡" | 触发 `generateFlashcards` action → 页面跳到学习步骤 |
+| `/dashboard/flashcards` | "讲解一下当前这张卡" | 触发 `explainFlashcard` action → 返回讲解文本 |
+| `/dashboard/flowcharts` | "画一个软件开发流程的流程图" | 触发 `generateFlowchart` action → 页面切到预览 |
+| `/dashboard/flowcharts` | "保存当前流程图，标题叫软件开发" | 触发 `saveFlowchart` action → 保存到库 |
+| `/dashboard/notes` | "创建一个笔记，标题叫今日学习，内容是复习了物理" | 触发 `Create a Note` action → 笔记列表新增一条 |
+| `/dashboard/notes` | "删除标题为今日学习的笔记" | 触发 `Delete a Note` action → 笔记消失 |
+| `/dashboard/quizzes` | "创建一个测验，标题叫物理基础" | 触发 `Create a Quiz` action → 测验列表新增 |
+
+### 5.3 CopilotTextarea 测试
+
+| 页面 | 操作 | 预期 |
+|------|------|------|
+| `/dashboard/flashcards` | 在学习材料输入框中打字 | CopilotTextarea 提供 AI 自动补全建议（灰色文字） |
+| `/dashboard/flowcharts` | 在概念输入框中打字 | 同上，stop 在换行和句号处 |
+| `/dashboard/quizzes/generate` | 在学习材料输入框中打字 | 注意：此页面 `autosuggestionsConfig={{}}` 为空配置，可能无补全 |
+
+---
+
+## 六、快速自检 Checklist
+
+| # | 检查项 | 预期 | 方法 |
+|---|--------|------|------|
+| 1 | `.env.local` API Key 是 `vck_` 开头 | 是 | 肉眼 |
+| 2 | 5 个模型名都是 `provider/model` 格式 | 是 | 搜索 `/` |
+| 3 | Node 启动日志显示 `✅ 已初始化` | 是 | 终端 |
+| 4 | `POST /api/chat/completion stream=false` 返回 200 + content 非空 | 通过 | 2.2 curl |
+| 5 | `/dashboard/chat` 发消息能逐字渲染 | 通过 | 浏览器 |
+| 6 | 生成中点击停止确实能停 | 通过 | 手动 |
+| 7 | Previous Chats 能看 / 能删 | 通过 | 浏览器 |
+| 8 | Node 显示 `[CopilotKit route] ✅ ServiceAdapter 构建完成` | 是 | 终端 |
+| 9 | CopilotKit 气泡能收发消息 | 通过 | 3.2 浏览器 |
+| 10 | `POST /api/copilotkit/generate-flashcards` 能生成闪卡 | 通过 | 4.1 curl |
+| 11 | `POST /api/generate-flowchart` 能生成 Mermaid | 通过 | 4.3 curl |
+| 12 | 气泡里说"生成闪卡"能触发 Action | 通过 | 5.2 浏览器 |
+
+**1~3 全绿** → 环境就绪
+**4~7 全绿** → 自研聊天链路通
+**8~9 全绿** → CopilotKit 链路通
+**10~12 全绿** → AI 工具端点 + Hooks 全通
