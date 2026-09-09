@@ -116,7 +116,27 @@ Generate ONLY the mermaid state diagram code starting with "stateDiagram-v2"`
       return `${basePrompt}
 
 Create a mind map structure showing:
-${complexity === 'simple' ? '- Main branches only' : complexity === 'detailed' ? '- Multiple levels of detail' : '- Comprehensive hierarchy with detailed sub-branches'}
+${complexity === 'simple' ? '- Main branches only (3-4 branches)' : complexity === 'detailed' ? '- Multiple levels of detail (2-3 levels deep)' : '- Comprehensive hierarchy with detailed sub-branches (3-4 levels deep)'}
+
+IMPORTANT SYNTAX RULES for Mermaid mindmap:
+- Start with "mindmap"
+- There must be EXACTLY ONE root node using the syntax: root((Concept Name))
+- All branches must be INDENTED under the root (use 2 spaces per level)
+- Each child node is simply text on its own line, no brackets or arrows
+- Use indentation to show hierarchy (2 spaces = 1 level deep)
+
+Example:
+mindmap
+  root((Project Management))
+    Planning
+      Requirements
+      Timeline
+    Execution
+      Development
+      Testing
+    Review
+      Retrospective
+      Improvements
 
 Generate ONLY the mermaid mindmap code starting with "mindmap"`
 
@@ -140,6 +160,29 @@ Generate ONLY the mermaid code starting with "flowchart TD"`
 function sanitizeMermaidCode(code: string): string {
   let cleaned = code.replace(/```mermaid\n?/g, '').replace(/```\n?/g, '')
   cleaned = cleaned.trim()
+
+  // mindmap 语法特殊处理：不能应用 ((text)) → NODE(["text"]) 转换
+  if (cleaned.startsWith('mindmap')) {
+    const lines = cleaned.split('\n')
+    // 确保有且仅有一个 root 节点
+    const rootIdx = lines.findIndex((l) => l.trim().startsWith('root('))
+    if (rootIdx === -1) {
+      // 没有 root 节点 → 把第一个缩进行当 root，其余保持缩进
+      const bodyLines = lines.slice(1).filter((l) => l.trim().length > 0)
+      if (bodyLines.length > 0) {
+        const firstContent = bodyLines[0].trim()
+        lines.splice(1, 0, `  root((${firstContent}))`)
+        // 删除原来的第一行内容（已提升为 root）
+        const origIdx = lines.findIndex(
+          (l, i) => i > 1 && l.trim() === firstContent,
+        )
+        if (origIdx !== -1) lines.splice(origIdx, 1)
+      }
+    }
+    return lines.join('\n')
+  }
+
+  // 非 mindmap：应用 ((text)) → NODE(["text"]) 转换（仅用于 flowchart）
   cleaned = cleaned
     .replace(/\(\(([^)]+)\)\)/g, (match, text) => {
       if (text.toLowerCase().includes('start')) return 'START(["Start"])'
