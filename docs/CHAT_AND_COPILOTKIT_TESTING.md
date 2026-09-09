@@ -5,14 +5,14 @@
 > 2. **CopilotKit 部分（备用 / 底层 Agent 能力）**：`/api/copilotkit` 端点 + 握手探测 + OpenAIAdapter
 
 相关文件索引：
-- 聊天前端：[dashboard/chat/page.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/chat/page.tsx)
-- 聊天后端 SSE：[api/chat/completion/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/chat/completion/route.ts)
-- 聊天历史 CRUD：[api/chats/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/chats/route.ts)
-- 统一 LLM 调用层：[lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts)
-- CopilotKit 运行时：[api/copilotkit/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts)
-- 握手端点：由 [api/copilotkit/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts)（Hono single-route）自动处理 `/info`，已删除独立 info stub 文件
-- Dashboard Provider（当前已启用）：[dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx) — useSingleEndpoint=true + agents__unsafe_dev_only 注册 HttpAgent(keys=[default]) + CopilotPopup 悬浮气泡
-- 环境变量示例：[.env.local](file:///d:/GITHUB_tmp/study-sphere/.env.local) / [.env.local.example](file:///d:/GITHUB_tmp/study-sphere/.env.local.example)
+- 聊天前端：[dashboard/chat/page.tsx](../src/app/dashboard/chat/page.tsx)
+- 聊天后端 SSE：[api/chat/completion/route.ts](../src/app/api/chat/completion/route.ts)
+- 聊天历史 CRUD：[api/chats/route.ts](../src/app/api/chats/route.ts)
+- 统一 LLM 调用层：[lib/llm.ts](../src/lib/llm.ts)
+- CopilotKit 运行时：[api/copilotkit/route.ts](../src/app/api/copilotkit/route.ts)
+- 握手端点：由 [api/copilotkit/route.ts](../src/app/api/copilotkit/route.ts)（Hono single-route）自动处理 `/info`，已删除独立 info stub 文件
+- Dashboard Provider（当前已启用）：[dashboard/layout.tsx](../src/app/dashboard/layout.tsx) — useSingleEndpoint=true + agents__unsafe_dev_only 注册 HttpAgent(keys=[default]) + CopilotPopup 悬浮气泡
+- 环境变量示例：[.env.local](../.env.local) / [.env.local.example](../.env.local.example)
 
 ---
 
@@ -114,7 +114,7 @@ Invoke-RestMethod -Method Post `
 | 模型名错 | 404 `The requested resource was not found: /v1/chat/completions` 或 `model not found` | 必须 `provider/model`，例如 `openai/gpt-4o-mini`，纯模型名 `gpt-4o-mini` 不认识 |
 | 速率限制 | 429 `Rate limited` / `You exceeded your current quota` | 等 1 分钟再试，或升级 Vercel 额度 |
 | Provider Billing 未绑 | 如 `openai provider is not configured` | `openai/*` / `anthropic/*` 都需要 Vercel AI Gateway 后台绑定对应 Provider 的 Billing |
-| 自定义 Base 路径拼错（修过的 bug） | 旧错误：`/v1/openai/v1/chat/completions 404` | 用新版本的 [lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts) 自定义 Base 原生 fetch 分支，不会再加 `/openai/v1` |
+| 自定义 Base 路径拼错（修过的 bug） | 旧错误：`/v1/openai/v1/chat/completions 404` | 用新版本的 [lib/llm.ts](../src/lib/llm.ts) 自定义 Base 原生 fetch 分支，不会再加 `/openai/v1` |
 
 #### 样例 B：流式 SSE（打字机效果）
 
@@ -204,7 +204,7 @@ data: {"type":"error","name":"HTTPError","message":"Invalid authentication token
 ```
 
 ### 2.2 当前 CopilotKit Provider 配置（已启用）
-Provider 已在 [dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L30-L36) 配置完成并启用，关键 props 如下：
+Provider 已在 [dashboard/layout.tsx](../src/app/dashboard/layout.tsx#L30-L36) 配置完成并启用，关键 props 如下：
 - `useSingleEndpoint={true}`：CopilotKit v1.9+ 修复 Agent 'default' not found 必须项（告诉前端只走单一后端端点，不再额外请求 runtime 元信息）。
 - `agents__unsafe_dev_only={{ default: new HttpAgent({ description, url: "/api/copilotkit" }) }}`：通过 @ag-ui/client 的 HttpAgent 显式注册 agent key=`default`，name 不需要在构造参数里传（key 就是 agent name）。
 - 组件：<CopilotPopup defaultOpen={false} labels={{ title, initial, placeholder }} clickOutsideToClose={true} />

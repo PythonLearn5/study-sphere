@@ -1,4 +1,5 @@
 // src/app/api/auth/login/route.ts
+// 确保已安装next包，若缺失可执行npm install next或yarn add next
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';

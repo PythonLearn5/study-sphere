@@ -1,3 +1,4 @@
+// 修复next/server模块找不到问题，确保Next.js版本正确且依赖已安装
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/jwt'
 

@@ -1,7 +1,7 @@
 # Study Sphere CopilotKit 设计与流程详解 (COPILOTKIT_DESIGN.md)
 
 > 本文档用于**系统学习 CopilotKit v1.9.x** 的设计理念、分层架构、握手 & 聊天时序、Service Adapter、Server-side Actions、Agents、常用 Hooks，并结合 Study Sphere 现有代码讲清楚每个概念。
-> 本文档对应改动：CopilotKit Provider 已在 [dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L10-L89) 恢复，侧栏 **右下角悬浮气泡**（CopilotPopup）已启用。
+> 本文档对应改动：CopilotKit Provider 已在 [dashboard/layout.tsx](../src/app/dashboard/layout.tsx#L10-L89) 恢复，侧栏 **右下角悬浮气泡**（CopilotPopup）已启用。
 
 ---
 
@@ -25,7 +25,7 @@ npm run dev
    [CopilotKit OpenAIAdapter(Vercel-Gateway·FakeClient)] process start userMessages=1 ...
    [CopilotKit OpenAIAdapter(Vercel-Gateway·FakeClient)] process done
    ```
-5. 气泡里应该能看到 AI 流式打字回复 ✅。如果报错，先看 Study Sphere 另一份文档 [CHAT_AND_COPILOTKIT_TESTING.md](file:///d:/GITHUB_tmp/study-sphere/docs/CHAT_AND_COPILOTKIT_TESTING.md) 的 2.4 节先把 Token / 模型名跑通。
+5. 气泡里应该能看到 AI 流式打字回复 ✅。如果报错，先看 Study Sphere 另一份文档 [CHAT_AND_COPILOTKIT_TESTING.md](./CHAT_AND_COPILOTKIT_TESTING.md) 的 2.4 节先把 Token / 模型名跑通。
 
 ---
 
@@ -45,8 +45,8 @@ CopilotKit 不是一个聊天 UI 组件那么简单，它是一个 **"把 LLM Ag
 ### 1.1 为什么 Study Sphere 保留了"两套聊天"？
 | 聊天方案 | 位置 | 适用场景（学习目的） |
 |---------|------|------------------|
-| 自研聊天页 | [/dashboard/chat](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/chat/page.tsx) | 学 **底层 SSE / ReadableStream / HTTP 协议**：自己发 `fetch`、自己解析 `data:` 帧、自己管 `AbortController`，把 AI 接口的底层打通 |
-| CopilotKit 气泡 | 右下角悬浮（[layout.tsx 里的 CopilotPopup](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L76-L84)） | 学 **AI Agent 框架层**：不用管 SSE，专注学 `Actions / Agents / useCopilotChat / useCopilotReadable / useCopilotAction` 这些更高阶的能力 |
+| 自研聊天页 | [/dashboard/chat](../src/app/dashboard/chat/page.tsx) | 学 **底层 SSE / ReadableStream / HTTP 协议**：自己发 `fetch`、自己解析 `data:` 帧、自己管 `AbortController`，把 AI 接口的底层打通 |
+| CopilotKit 气泡 | 右下角悬浮（[layout.tsx 里的 CopilotPopup](../src/app/dashboard/layout.tsx#L76-L84)） | 学 **AI Agent 框架层**：不用管 SSE，专注学 `Actions / Agents / useCopilotChat / useCopilotReadable / useCopilotAction` 这些更高阶的能力 |
 
 两套共存的目的：**先把底层搞懂（自研页），再把框架能力吃透（CopilotKit）**，不冲突。
 
@@ -115,7 +115,7 @@ CopilotKit 不是一个聊天 UI 组件那么简单，它是一个 **"把 LLM Ag
 
 ## 3. 前端 3 个 npm 包（分别装了什么）
 
-看 [package.json](file:///d:/GITHUB_tmp/study-sphere/package.json#L17-L20)：
+看 [package.json](../package.json#L17-L20)：
 
 ```json
 "@copilotkit/react-core":     "^1.9.0",   // ← 必装：状态层（Provider / Hooks / Context）
@@ -129,7 +129,7 @@ CopilotKit 不是一个聊天 UI 组件那么简单，它是一个 **"把 LLM Ag
 ### 3.1 @copilotkit/react-core — Provider + Hooks
 **最重要的包**。UI 组件只是它的外观，真正"把应用变成 Copilot"的是这个包的 4 样东西：
 
-1. **`<CopilotKit runtimeUrl="/api/copilotkit">`**：React Context Provider，**必须包在你要用到 Copilot 功能的最外层**（Study Sphere 里包在 [dashboard/layout.tsx:L64](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L64-L88)，所以任一 dashboard 页面都能用气泡 / Hooks）。
+1. **`<CopilotKit runtimeUrl="/api/copilotkit">`**：React Context Provider，**必须包在你要用到 Copilot 功能的最外层**（Study Sphere 里包在 [dashboard/layout.tsx:L64](../src/app/dashboard/layout.tsx#L64-L88)，所以任一 dashboard 页面都能用气泡 / Hooks）。
    - Props 重点：
      - `runtimeUrl`：后端端点，必须匹配你 Route Handler 的路径（本项目 `/api/copilotkit`）。
      - `showDevtools`：传 `true` 时弹出 CopilotKit 官方 DevTools（调试时强烈推荐开启）。
@@ -199,7 +199,7 @@ Study Sphere 现在用的是 `CopilotPopup`（右下角气泡）。你可以后�
 
 ## 4. 后端 Service：@copilotkit/runtime（核心 3 件事）
 
-对应 [api/copilotkit/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts)。这个文件就是 CopilotKit 的后端大脑。学后端时 100% 围绕它。
+对应 [api/copilotkit/route.ts](../src/app/api/copilotkit/route.ts)。这个文件就是 CopilotKit 的后端大脑。学后端时 100% 围绕它。
 
 ### 4.1 三剑客：Runtime + Adapter + Endpoint Helper
 每个 CopilotKit 后端 Route 都长这样（Study Sphere 第 290~295 行）：
@@ -234,7 +234,7 @@ return handleRequest(req);                                     // 就这么一�
   - 自动把 POST body 转成 Runtime 能吃的 request object
 
 ### 4.2 Study Sphere 对 Adapter 的关键改进（必须理解）
-原始的 Adapter + 原生 SDK 组合在 Vercel Gateway 场景**会翻车**，我们在 [api/copilotkit/route.ts 第 82~226 行](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts#L82-L226) 写了两个增强：
+原始的 Adapter + 原生 SDK 组合在 Vercel Gateway 场景**会翻车**，我们在 [api/copilotkit/route.ts 第 82~226 行](../src/app/api/copilotkit/route.ts#L82-L226) 写了两个增强：
 
 **改进 A：`createSafeAdapter(baseAdapter, label)`（Proxy 包装器，第 23~80 行）**
 作用：
@@ -308,7 +308,7 @@ OpenAIAdapter.process()
   ```
 - ⚠️ **握手失败 ≠ "只是 Console 红了一下"**：CopilotKit 会判定 Runtime 不可达，**拒绝发送后续任何 POST /api/copilotkit 请求**。所以你会看到"用户点了发送但 Node 终端一点反应都没有"，这就是原因。
 - 这就是为什么现在要做（single-route 模式）：
-  1. [api/copilotkit/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts) 必须同时响应 GET /info（200 JSON）和 POST；不再有独立 info 文件。
+  1. [api/copilotkit/route.ts](../src/app/api/copilotkit/route.ts) 必须同时响应 GET /info（200 JSON）和 POST；不再有独立 info 文件。
   2. `capabilities.chat` 必须为 `true`，否则虽然握手成功，但 CopilotPopup 的发送按钮会灰掉不让发。
   3. 前端必须开启 `useSingleEndpoint={true}` 并通过 `agents__unsafe_dev_only` 注册至少一个 agent（@ag-ui/client 的 HttpAgent），否则会报 `Agent 'default' not found`。
 
@@ -519,9 +519,9 @@ useEffect(() => { setAgent("flashcard-expert"); return () => setAgent("general-h
 | 步骤 | 练习内容 | 你要改的文件 / 加的代码 | 验证方式 |
 |------|---------|----------------------|---------|
 | 1 | ✅ **已自动完成**：确认 Provider 正常 → 浏览器打开任一 dashboard 页面 → F12 看请求。当前 useSingleEndpoint 模式不会单独发 GET /info；可手动执行 `curl http://localhost:3000/api/copilotkit/info | jq`，返回 JSON 中 capabilities.chat=true 且 agents/actions 至少有一个 key，右下角 CopilotPopup 气泡可点开。 | 无 404 无红色报错；右下角气泡可点开 |
-| 2 | 让 AI 回复中文人设 | 在 [layout.tsx 的 CopilotPopup](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L76-L84) 上加 prop：`instructions="你是中文学习助手，永远用简体中文回答，适当举例子"` | 气泡问英文问题它仍然回中文 |
+| 2 | 让 AI 回复中文人设 | 在 [layout.tsx 的 CopilotPopup](../src/app/dashboard/layout.tsx#L76-L84) 上加 prop：`instructions="你是中文学习助手，永远用简体中文回答，适当举例子"` | 气泡问英文问题它仍然回中文 |
 | 3 | 打开 CopilotKit DevTools | `CopilotKit` 加 prop：`showDevtools={true}` | 浏览器里多一个 Copilot 控制台，能看 messages / tool calls |
-| 4 | 写一个**最简单的 Server-side Action**（如返回时间） | 在 [api/copilotkit/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts) 里挂一个 `getCurrentTime` action（description="当用户问现在几点时调用"） | 气泡问"几点了"，DevTools 能看到 tool_call，UI 上 AI 回答正确时间 |
+| 4 | 写一个**最简单的 Server-side Action**（如返回时间） | 在 [api/copilotkit/route.ts](../src/app/api/copilotkit/route.ts) 里挂一个 `getCurrentTime` action（description="当用户问现在几点时调用"） | 气泡问"几点了"，DevTools 能看到 tool_call，UI 上 AI 回答正确时间 |
 | 5 | 写一个**读 DB 的 Action**（如 §7.1 `listMyTasksDueToday`） | 同上，handler 里解析 JWT（从 req.cookie）→ 调 drizzle 查 tasks 表 → 返回字符串 | 气泡问"今天我要做什么"，能看到真实 DB 里的数据 |
 | 6 | 写一个**写 DB 的 Action**（如 §7.1 `createFlashcards`） | handler 调闪卡生成逻辑 + 调 drizzle insert into flashcards + insert into decks | 气泡说"帮我创建 5 张 Java 多线程闪卡"，然后去闪卡页能看到新卡组 |
 | 7 | 上 **Multi-Agents** | 在闪卡学习页用 `useEffect(()=>setAgent("flashcard-expert"))`；在测验页用 setAgent("quiz-expert") | 两个页面分别问问题，只允许调用各自 action，推理质量提升 |
@@ -534,15 +534,15 @@ useEffect(() => { setAgent("flashcard-expert"); return () => setAgent("general-h
 
 | 功能层 | 文件 | 说明 |
 |--------|------|------|
-| 前端 Provider + 气泡 UI | [dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L10-L89) | `CopilotKit` 包所有 dashboard + 右下角 `CopilotPopup` |
-| 前端 HttpAgent 注册 | [dashboard/layout.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/layout.tsx#L30-L36) | 从 @ag-ui/client 引入 HttpAgent，通过 agents__unsafe_dev_only 注册 key=default 的 agent（不要在构造参数里写 name） |
-| 自研聊天页（对比学习用） | [dashboard/chat/page.tsx](file:///d:/GITHUB_tmp/study-sphere/src/app/dashboard/chat/page.tsx) | 自己写的 SSE/useState/useRef 流式聊天 |
-| 后端 /info 握手 & POST 运行时（single-route 合并） | [api/copilotkit/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts) | Hono 单文件同时托管 GET /info 和 POST；capabilities.chat=true，agents/actions 至少有返回值 |
-| 后端 Runtime 主端点 | [api/copilotkit/route.ts](file:///d:/GITHUB_tmp/study-sphere/src/app/api/copilotkit/route.ts) | 本文件就是本项目的 Copilot 大脑，重点读：SafeAdapter、makeFakeOpenAIClient、buildServiceAdapter、Endpoint Helper 调用 |
-| 统一 LLM 层（所有 AI 最终汇总在这里） | [lib/llm.ts](file:///d:/GITHUB_tmp/study-sphere/src/lib/llm.ts) | 自定义 Base (Vercel AI Gateway) → 原生 fetch；OpenAI 兼容协议；非流式 runChatCompletionJSON；流式 runChatCompletionStream |
-| 测试文档（curl / Postman / 样例） | [CHAT_AND_COPILOTKIT_TESTING.md](file:///d:/GITHUB_tmp/study-sphere/docs/CHAT_AND_COPILOTKIT_TESTING.md) | 每一步 curl 示例 + 成功/失败响应样例 + 排错表格 |
-| 系统功能清单 | [FEATURES.md](file:///d:/GITHUB_tmp/study-sphere/docs/FEATURES.md) | 所有功能模块 + 对应 API/页面总览 |
-| 依赖版本 | [package.json](file:///d:/GITHUB_tmp/study-sphere/package.json#L17-L20) | @copilotkit/* 四个包版本：v1.9.x |
+| 前端 Provider + 气泡 UI | [dashboard/layout.tsx](../src/app/dashboard/layout.tsx#L10-L89) | `CopilotKit` 包所有 dashboard + 右下角 `CopilotPopup` |
+| 前端 HttpAgent 注册 | [dashboard/layout.tsx](../src/app/dashboard/layout.tsx#L30-L36) | 从 @ag-ui/client 引入 HttpAgent，通过 agents__unsafe_dev_only 注册 key=default 的 agent（不要在构造参数里写 name） |
+| 自研聊天页（对比学习用） | [dashboard/chat/page.tsx](../src/app/dashboard/chat/page.tsx) | 自己写的 SSE/useState/useRef 流式聊天 |
+| 后端 /info 握手 & POST 运行时（single-route 合并） | [api/copilotkit/route.ts](../src/app/api/copilotkit/route.ts) | Hono 单文件同时托管 GET /info 和 POST；capabilities.chat=true，agents/actions 至少有返回值 |
+| 后端 Runtime 主端点 | [api/copilotkit/route.ts](../src/app/api/copilotkit/route.ts) | 本文件就是本项目的 Copilot 大脑，重点读：SafeAdapter、makeFakeOpenAIClient、buildServiceAdapter、Endpoint Helper 调用 |
+| 统一 LLM 层（所有 AI 最终汇总在这里） | [lib/llm.ts](../src/lib/llm.ts) | 自定义 Base (Vercel AI Gateway) → 原生 fetch；OpenAI 兼容协议；非流式 runChatCompletionJSON；流式 runChatCompletionStream |
+| 测试文档（curl / Postman / 样例） | [CHAT_AND_COPILOTKIT_TESTING.md](./CHAT_AND_COPILOTKIT_TESTING.md) | 每一步 curl 示例 + 成功/失败响应样例 + 排错表格 |
+| 系统功能清单 | [FEATURES.md](./FEATURES.md) | 所有功能模块 + 对应 API/页面总览 |
+| 依赖版本 | [package.json](../package.json#L17-L20) | @copilotkit/* 四个包版本：v1.9.x |
 
 ---
 
