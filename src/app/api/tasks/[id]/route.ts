@@ -46,8 +46,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 
     const body = await request.json()
     
+    // JSON 序列化会把 Date 变成 ISO 字符串，drizzle timestamp 模式需要 Date 对象
     const updateData = {
       ...body,
+      dueDate: body.dueDate !== undefined ? (body.dueDate ? new Date(body.dueDate) : null) : undefined,
+      scheduledDate: body.scheduledDate !== undefined ? (body.scheduledDate ? new Date(body.scheduledDate) : null) : undefined,
       updatedAt: new Date(),
       ...(body.status === 'completed' && !body.completedAt ? { completedAt: new Date() } : {}),
     }

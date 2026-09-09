@@ -37,9 +37,11 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     
-    // Validate the request body
+    // JSON 序列化会把 Date 变成 ISO 字符串，Zod 校验需要 Date 对象，这里做转换
     const taskData = {
       ...body,
+      dueDate: body.dueDate ? new Date(body.dueDate) : null,
+      scheduledDate: body.scheduledDate ? new Date(body.scheduledDate) : null,
       id: uuidv4(),
       userId: session.userId,
       status: 'pending' as const,
