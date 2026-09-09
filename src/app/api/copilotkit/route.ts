@@ -106,136 +106,160 @@ function createSafeAdapter(baseAdapter: any, label: string) {
 }
 
 // ============ Fake OpenAI Client（不依赖任何 SDK，复用 llm.ts 统一接口）============
-function makeFakeOpenAIClient() {
-  return {
-    chat: {
-      completions: {
-        create: async function (params: any) {
-          const { stream = false, messages, model, temperature, max_tokens, response_format } =
-            params as ChatCompletionParams & { stream?: boolean }
+type StreamChunk = { delta: string; done: boolean; err?: LLMError }
 
-          const callParams: ChatCompletionParams = {
-            messages: (messages ?? []).map((m: any) => ({
-              role: (typeof m?._getType === "function"
-                ? m._getType() === "human"
-                  ? "user"
-                  : m._getType() === "ai"
-                    ? "assistant"
-                    : "system"
-                : (m.role as any)) ?? "user",
-              content:
-                typeof m?.getContent === "function" ? String(m.getContent()) : String(m.content ?? ""),
-            })),
-            model: model || LLM_MODELS.chat,
-            temperature,
-            max_tokens,
-            response_format,
+function mapMessages(messages: any) {
+  return (messages ?? []).map((m: any) => ({
+    role: (typeof m?._getType === "function"
+      ? m._getType() === "human"
+        ? "user"
+        : m._getType() === "ai"
+          ? "assistant"
+          : "system"
+        : (m.role as any)) ?? "user",
+    content:
+      typeof m?.getContent === "function" ? String(m.getContent()) : String(m.content ?? ""),
+  }))
+}
+
+function createStreamIterable(callParams: ChatCompletionParams) {
+  const queue: StreamChunk[] = []
+  let resolveNext: ((chunk: StreamChunk) => void) | null = null
+  let streamFinished = false
+
+  function pushChunk(chunk: StreamChunk) {
+    if (resolveNext) {
+      const r = resolveNext
+      resolveNext = null
+      r(chunk)
+    } else {
+      queue.push(chunk)
+    }
+  }
+
+  runChatCompletionStream(callParams, {
+    onToken: (delta) => {
+      if (!delta) return
+      pushChunk({ delta, done: false })
+    },
+    onDone: () => {
+      streamFinished = true
+      pushChunk({ delta: "", done: true })
+    },
+    onError: (err) => {
+      streamFinished = true
+      pushChunk({ delta: "", done: true, err })
+    },
+  })
+
+  const asyncIterator: AsyncIterator<any> = {
+    async next(): Promise<IteratorResult<any>> {
+      if (queue.length) {
+        const chunk = queue.shift()!
+        if (chunk.err) throw chunk.err
+        if (chunk.done) return { value: undefined as any, done: true }
+        return {
+          value: {
+            id: "chatcmpl-stream",
+            object: "chat.completion.chunk",
+            created: Math.floor(Date.now() / 1000),
+            model: callParams.model,
+            choices: [{ index: 0, delta: { content: chunk.delta }, finish_reason: null }],
+          },
+          done: false,
+        }
+      }
+      if (streamFinished) {
+        return { value: undefined as any, done: true }
+      }
+      return await new Promise<IteratorResult<any>>((resolve, reject) => {
+        resolveNext = (chunk) => {
+          if (chunk.err) {
+            reject(chunk.err)
+            return
           }
-
-          // ======== 非流式 ========
-          if (!stream) {
-            const { content } = await runChatCompletionJSON(callParams)
-            return {
-              id: "chatcmpl-" + Math.random().toString(36).slice(2, 12),
-              object: "chat.completion",
+          if (chunk.done) {
+            resolve({ value: undefined as any, done: true })
+            return
+          }
+          resolve({
+            value: {
+              id: "chatcmpl-stream",
+              object: "chat.completion.chunk",
               created: Math.floor(Date.now() / 1000),
               model: callParams.model,
-              choices: [
-                {
-                  index: 0,
-                  message: { role: "assistant", content },
-                  finish_reason: "stop",
-                },
-              ],
-              usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
-            }
-          }
-
-          // ======== 流式：返回 AsyncGenerator ========
-          type StreamChunk = { delta: string; done: boolean; err?: LLMError }
-          const queue: StreamChunk[] = []
-          let resolveNext: ((chunk: StreamChunk) => void) | null = null
-          let streamFinished = false
-
-          function pushChunk(chunk: StreamChunk) {
-            if (resolveNext) {
-              const r = resolveNext
-              resolveNext = null
-              r(chunk)
-            } else {
-              queue.push(chunk)
-            }
-          }
-
-          runChatCompletionStream(callParams, {
-            onToken: (delta) => {
-              if (!delta) return
-              pushChunk({ delta, done: false })
+              choices: [{ index: 0, delta: { content: chunk.delta }, finish_reason: null }],
             },
-            onDone: () => {
-              streamFinished = true
-              pushChunk({ delta: "", done: true })
-            },
-            onError: (err) => {
-              streamFinished = true
-              pushChunk({ delta: "", done: true, err })
-            },
+            done: false,
           })
-
-          const asyncIterator: AsyncIterator<any> = {
-            async next(): Promise<IteratorResult<any>> {
-              if (queue.length) {
-                const chunk = queue.shift()!
-                if (chunk.err) throw chunk.err
-                if (chunk.done) return { value: undefined as any, done: true }
-                return {
-                  value: {
-                    id: "chatcmpl-stream",
-                    object: "chat.completion.chunk",
-                    created: Math.floor(Date.now() / 1000),
-                    model: callParams.model,
-                    choices: [{ index: 0, delta: { content: chunk.delta }, finish_reason: null }],
-                  },
-                  done: false,
-                }
-              }
-              if (streamFinished) {
-                return { value: undefined as any, done: true }
-              }
-              return await new Promise<IteratorResult<any>>((resolve, reject) => {
-                resolveNext = (chunk) => {
-                  if (chunk.err) {
-                    reject(chunk.err)
-                    return
-                  }
-                  if (chunk.done) {
-                    resolve({ value: undefined as any, done: true })
-                    return
-                  }
-                  resolve({
-                    value: {
-                      id: "chatcmpl-stream",
-                      object: "chat.completion.chunk",
-                      created: Math.floor(Date.now() / 1000),
-                      model: callParams.model,
-                      choices: [{ index: 0, delta: { content: chunk.delta }, finish_reason: null }],
-                    },
-                    done: false,
-                  })
-                }
-              })
-            },
-          }
-
-          const asyncIterable: any = {
-            [Symbol.asyncIterator]() {
-              return asyncIterator
-            },
-          }
-          return asyncIterable
-        },
-      },
+        }
+      })
     },
+  }
+
+  return {
+    [Symbol.asyncIterator]() {
+      return asyncIterator
+    },
+  }
+}
+
+function makeFakeOpenAIClient() {
+  const completions = {
+    // 非流式 + 旧版流式入口（stream:true 时返回 async iterable）
+    create: async function (params: any) {
+      const { stream = false, messages, model, temperature, max_tokens, response_format } =
+        params as ChatCompletionParams & { stream?: boolean }
+
+      const callParams: ChatCompletionParams = {
+        messages: mapMessages(messages),
+        model: model || LLM_MODELS.chat,
+        temperature,
+        max_tokens,
+        response_format,
+      }
+
+      // ======== 非流式 ========
+      if (!stream) {
+        const { content } = await runChatCompletionJSON(callParams)
+        return {
+          id: "chatcmpl-" + Math.random().toString(36).slice(2, 12),
+          object: "chat.completion",
+          created: Math.floor(Date.now() / 1000),
+          model: callParams.model,
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content },
+              finish_reason: "stop",
+            },
+          ],
+          usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+        }
+      }
+
+      // ======== 流式：返回 AsyncIterable ========
+      return createStreamIterable(callParams)
+    },
+    // OpenAIAdapter.process() 调用的是 beta.chat.completions.stream()，同步返回 async iterable
+    stream: function (params: any) {
+      const { messages, model, temperature, max_tokens, response_format } =
+        params as ChatCompletionParams & { stream?: boolean }
+
+      const callParams: ChatCompletionParams = {
+        messages: mapMessages(messages),
+        model: model || LLM_MODELS.chat,
+        temperature,
+        max_tokens,
+        response_format,
+      }
+      return createStreamIterable(callParams)
+    },
+  }
+
+  return {
+    chat: { completions },
+    beta: { chat: { completions } },
   }
 }
 
