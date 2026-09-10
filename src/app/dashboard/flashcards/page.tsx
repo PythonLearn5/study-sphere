@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useCopilotAction } from "@copilotkit/react-core"
-import { useAgentContext } from "@copilotkit/react-core/v2"
+import { useFrontendTool, useAgentContext } from "@copilotkit/react-core/v2"
+import { z } from "zod"
 import { CopilotTextarea } from "@copilotkit/react-textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -363,35 +363,15 @@ const FlashcardsPage = () => {
     }
   })
   // Copilot action for generating flashcards
-  useCopilotAction({
+  useFrontendTool({
     name: "generateFlashcards",
     description: "Generate flashcards from study material using AI. This will analyze the provided study material and create educational flashcards with questions and answers.",
-    parameters: [
-      {
-        name: "material",
-        type: "string",
-        description: "The study material to create flashcards from",
-        required: true
-      },
-      {
-        name: "count",
-        type: "number",
-        description: "Number of flashcards to generate (5-25)",
-        required: false
-      },
-      {
-        name: "difficultyLevel",
-        type: "string",
-        description: "Difficulty level: easy, medium, or hard",
-        required: false
-      },
-      {
-        name: "focus",
-        type: "string",
-        description: "Focus area: definitions, concepts, problem-solving, or general",
-        required: false
-      }
-    ],
+    parameters: z.object({
+      material: z.string().describe("The study material to create flashcards from"),
+      count: z.number().optional().describe("Number of flashcards to generate (5-25)"),
+      difficultyLevel: z.string().optional().describe("Difficulty level: easy, medium, or hard"),
+      focus: z.string().optional().describe("Focus area: definitions, concepts, problem-solving, or general"),
+    }),
     handler: async ({ material, count = 10, difficultyLevel = "medium", focus = "general" }) => {
       try {
         // Update the current form values
@@ -416,20 +396,15 @@ const FlashcardsPage = () => {
         const errorMessage = error instanceof Error ? error.message : 'Failed to generate flashcards'
         return `Error: ${errorMessage}. Please try again or check your study material.`
       }
-    }  })
+    }  }, [])
 
   // Copilot action for study assistance
-  useCopilotAction({
+  useFrontendTool({
     name: "explainFlashcard",
     description: "Get detailed explanation about a flashcard answer or ask questions about the content",
-    parameters: [
-      {
-        name: "question",
-        type: "string",
-        description: "Question about the current flashcard or request for explanation",
-        required: true
-      }
-    ],
+    parameters: z.object({
+      question: z.string().describe("Question about the current flashcard or request for explanation"),
+    }),
     handler: async ({ question }) => {
       const currentCard = generatedFlashcards[currentCardIndex]
       if (!currentCard) {
@@ -459,7 +434,7 @@ const FlashcardsPage = () => {
         return "I'm having trouble providing an explanation right now. Please try again later."
       }
     }
-  })
+  }, [])
   const handleGenerateFlashcards = async () => {
     if (!studyMaterial.trim()) {
       alert("Please enter some study material first!")

@@ -2,8 +2,8 @@
 
 import { useQuizzesContext } from "@/lib/quizzes/quizzes-provider"
 import { Question, Quiz } from "@/lib/quizzes/types"
-import { useCopilotAction } from "@copilotkit/react-core"
-import { useAgentContext } from "@copilotkit/react-core/v2"
+import { useFrontendTool, useAgentContext } from "@copilotkit/react-core/v2"
+import { z } from "zod"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -84,62 +84,25 @@ function QuizzesComponent() {
     value: JSON.stringify({ quizzes, selectedSubject, selectedTopic, selectedDifficulty, showBookmarked, showCompleted }),
   })
 
-  useCopilotAction({
+  useFrontendTool({
     name: "create_a_quiz",
     description: "Adds a quiz to quizzes list.",
-    parameters: [
-      {
-        name: "title",
-        type: "string",
-        description: "The title of the quiz.",
-        required: true,
-      },
-      {
-        name: "questions",
-        type: "object[]",
-        description: "An array of questions.",
-        required: true,
-      },
-      {
-        name: "description",
-        type: "string",
-        description: "The description of the quiz.",
-        required: false,
-      },
-      {
-        name: "subjectId",
-        type: "string",
-        description: "The subject ID for the quiz.",
-        required: true,
-      },
-      {
-        name: "topicId",
-        type: "string",
-        description: "The topic ID for the quiz.",
-        required: true,
-      },
-      {
-        name: "difficulty",
-        type: "string",
-        description: "The difficulty level (beginner, intermediate, advanced).",
-        required: true,
-      },
-    ],
-    handler: (args: {
-      title: string
-      description?: string
-      questions: Question[]
-      subjectId: string
-      topicId: string
-      difficulty: string
-    }) => {
+    parameters: z.object({
+      title: z.string().describe("The title of the quiz."),
+      questions: z.array(z.any()).describe("An array of questions."),
+      description: z.string().optional().describe("The description of the quiz."),
+      subjectId: z.string().describe("The subject ID for the quiz."),
+      topicId: z.string().describe("The topic ID for the quiz."),
+      difficulty: z.string().describe("The difficulty level (beginner, intermediate, advanced)."),
+    }),
+    handler: ({ title, description, questions, subjectId, topicId, difficulty }) => {
       // Check if a quiz with the same title already exists
       const existingQuiz = quizzes.find(quiz =>
-        quiz.title.toLowerCase().trim() === args.title.toLowerCase().trim()
+        quiz.title.toLowerCase().trim() === title.toLowerCase().trim()
       )
 
       if (existingQuiz) {
-        throw new Error(`A quiz with the title "${args.title}" already exists. Please choose a different title.`)
+        throw new Error(`A quiz with the title "${title}" already exists. Please choose a different title.`)
       }
 
       // Generate unique ID using timestamp and random string
@@ -148,25 +111,25 @@ function QuizzesComponent() {
       }
 
       // Ensure questions have unique IDs
-      const questionsWithIds = (args.questions as Question[]).map((question, index) => ({
+      const questionsWithIds = (questions as Question[]).map((question, index) => ({
         ...question,
         id: question.id || `q-${generateUniqueId()}-${index}`
       }))
 
       const newQuiz: Omit<Quiz, 'id' | 'createdAt' | 'updatedAt'> = {
         userId: "1", // TODO: Get actual user ID
-        subjectId: args.subjectId,
-        topicId: args.topicId,
-        title: args.title.trim(),
-        description: args.description?.trim() || "",
-        difficulty: args.difficulty as 'beginner' | 'intermediate' | 'advanced',
+        subjectId,
+        topicId,
+        title: title.trim(),
+        description: description?.trim() || "",
+        difficulty: difficulty as 'beginner' | 'intermediate' | 'advanced',
         questions: questionsWithIds,
         timeLimit: 300, // 5 minutes default
       }
 
       createQuiz(newQuiz)
     },
-  })
+  }, [])
 
   if (isLoading) {
     return (

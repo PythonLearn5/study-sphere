@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useCopilotAction } from "@copilotkit/react-core"
-import { useAgentContext } from "@copilotkit/react-core/v2"
+import { useFrontendTool, useAgentContext } from "@copilotkit/react-core/v2"
+import { z } from "zod"
 import { CopilotTextarea } from "@copilotkit/react-textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -83,59 +83,33 @@ function FlowchartsComponent() {
   })
 
   // Copilot action for generating flowcharts
-  useCopilotAction({
+  useFrontendTool({
     name: "generateFlowchart",
     description:
       "Generate a Mermaid flowchart from a concept description. This will analyze the provided concept and create a visual flowchart using Mermaid syntax.",
-    parameters: [
-      {
-        name: "concept",
-        type: "string",
-        description: "The concept, process, or idea to visualize in the flowchart",
-        required: true,
-      },
-      {
-        name: "chartType",
-        type: "string",
-        description:
-          "Type of chart: flowchart, sequence, class, state, entity-relationship, mindmap, or timeline",
-        required: false,
-      },
-      {
-        name: "complexity",
-        type: "string",
-        description: "Level of detail: simple, detailed, or comprehensive",
-        required: false,
-      },
-      {
-        name: "title",
-        type: "string",
-        description: "Title for the flowchart",
-        required: false,
-      },
-    ],
-    handler: async (args: {
-      concept: string
-      chartType?: string
-      complexity?: string
-      title?: string
-    }) => {
+    parameters: z.object({
+      concept: z.string().describe("The concept, process, or idea to visualize in the flowchart"),
+      chartType: z.string().optional().describe("Type of chart: flowchart, sequence, class, state, entity-relationship, mindmap, or timeline"),
+      complexity: z.string().optional().describe("Level of detail: simple, detailed, or comprehensive"),
+      title: z.string().optional().describe("Title for the flowchart"),
+    }),
+    handler: async ({ concept, chartType: chartTypeArg, complexity: complexityArg, title: titleArg }) => {
       try {
         setIsGenerating(true)
-        setConcept(args.concept)
+        setConcept(concept)
 
-        const selectedChartType = (args.chartType as Flowchart["chartType"]) || chartType
+        const selectedChartType = (chartTypeArg as Flowchart["chartType"]) || chartType
         const selectedComplexity =
-          (args.complexity as "simple" | "detailed" | "comprehensive") || complexity
+          (complexityArg as "simple" | "detailed" | "comprehensive") || complexity
 
-        if (args.chartType) {
+        if (chartTypeArg) {
           setChartType(selectedChartType)
         }
-        if (args.complexity) {
+        if (complexityArg) {
           setComplexity(selectedComplexity)
         }
-        if (args.title) {
-          setTitle(args.title)
+        if (titleArg) {
+          setTitle(titleArg)
         }
 
         // Use the API to generate flowchart with CopilotKit integration
@@ -145,7 +119,7 @@ function FlowchartsComponent() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            concept: args.concept,
+            concept,
             chartType: selectedChartType,
             complexity: selectedComplexity,
           }),
@@ -172,7 +146,7 @@ function FlowchartsComponent() {
         setGeneratedCode(result.mermaidCode)
         setActiveTab("preview")
 
-        return `Successfully generated a ${selectedChartType} flowchart for "${args.concept}". The flowchart shows ${selectedComplexity} level detail. You can now preview, edit, or save the flowchart.`
+        return `Successfully generated a ${selectedChartType} flowchart for "${concept}". The flowchart shows ${selectedComplexity} level detail. You can now preview, edit, or save the flowchart.`
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Failed to generate flowchart"
         return `Error: ${errorMessage}. Please try again with a clearer concept description.`
@@ -180,27 +154,17 @@ function FlowchartsComponent() {
         setIsGenerating(false)
       }
     },
-  })
+  }, [])
 
   // Copilot action for saving flowcharts
-  useCopilotAction({
+  useFrontendTool({
     name: "saveFlowchart",
     description: "Save the current generated flowchart to the user's collection",
-    parameters: [
-      {
-        name: "title",
-        type: "string",
-        description: "Title for the flowchart",
-        required: true,
-      },
-      {
-        name: "description",
-        type: "string",
-        description: "Description of what the flowchart represents",
-        required: false,
-      },
-    ],
-    handler: async (args: { title: string; description?: string }) => {
+    parameters: z.object({
+      title: z.string().describe("Title for the flowchart"),
+      description: z.string().optional().describe("Description of what the flowchart represents"),
+    }),
+    handler: async ({ title, description }) => {
       try {
         if (!generatedCode) {
           return "No flowchart to save. Please generate a flowchart first."
@@ -208,8 +172,8 @@ function FlowchartsComponent() {
 
         const newFlowchart: Flowchart = {
           id: `flowchart_${Date.now()}`,
-          title: args.title,
-          description: args.description || "",
+          title,
+          description: description || "",
           mermaidCode: generatedCode,
           chartType,
           createdAt: new Date(),
@@ -221,13 +185,13 @@ function FlowchartsComponent() {
         setDescription("")
         setActiveTab("library")
 
-        return `Flowchart "${args.title}" has been saved successfully to your library!`
+        return `Flowchart "${title}" has been saved successfully to your library!`
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Failed to save flowchart"
         return `Error: ${errorMessage}. Please try again.`
       }
     },
-  })
+  }, [])
 
   const handleSave = async () => {
     if (!generatedCode || !title) return

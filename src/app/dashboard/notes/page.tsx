@@ -5,8 +5,8 @@ import "react-quill/dist/quill.snow.css"
 
 import { NotesProvider, useNotesContext } from "@/lib/notes/notes-provider"
 import { Note } from "@/lib/notes/types"
-import { useCopilotAction } from "@copilotkit/react-core"
-import { useAgentContext } from "@copilotkit/react-core/v2"
+import { useFrontendTool, useAgentContext } from "@copilotkit/react-core/v2"
+import { z } from "zod"
 import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -305,22 +305,17 @@ function NotesComponent() {
     value: JSON.stringify(notes),
   })
 
-  useCopilotAction({
+  useFrontendTool({
     name: "create_a_note",
     description: "Adds a note to notes list with optional categories.",
-    parameters: [
-      { name: "title", type: "string", required: true },
-      { name: "content", type: "string", required: true },
-      {
-        name: "categories",
-        type: "string",
-        description: "Comma-separated categories (max 2)",
-        required: false,
-      },
-    ],
-    handler: async args => {
-      const categories = args.categories
-        ? (args.categories as string)
+    parameters: z.object({
+      title: z.string().describe("The title of the note"),
+      content: z.string().describe("The content of the note"),
+      categories: z.string().optional().describe("Comma-separated categories (max 2)"),
+    }),
+    handler: async ({ title, content, categories }) => {
+      const parsedCategories = categories
+        ? categories
             .split(",")
             .map(c => c.trim())
             .slice(0, 2)
@@ -328,9 +323,9 @@ function NotesComponent() {
 
       const newNote: ExtendedNote = {
         id: Math.random().toString(),
-        title: args.title as string,
-        content: args.content as string,
-        categories,
+        title,
+        content,
+        categories: parsedCategories,
         userId: 0,
         createdAt: "",
         modifiedAt: ""
@@ -339,55 +334,45 @@ function NotesComponent() {
       console.log("Note created", newNote)
       return `笔记「${newNote.title}」已创建成功。`
     },
-  })
+  }, [])
 
-  useCopilotAction({
+  useFrontendTool({
     name: "delete_a_note",
     description: "Deletes a note from notes list.",
-    parameters: [
-      {
-        name: "id",
-        type: "string",
-        description: "The id of the note.",
-        required: true,
-      },
-    ],
-    handler: async args => {
-      await deleteNote(args.id as string)
+    parameters: z.object({
+      id: z.string().describe("The id of the note."),
+    }),
+    handler: async ({ id }) => {
+      await deleteNote(id)
       return `笔记已删除。`
     },
-  })
+  }, [])
 
-  useCopilotAction({
+  useFrontendTool({
     name: "update_a_note",
     description: "Updates a note from notes list with optional categories.",
-    parameters: [
-      { name: "id", type: "string", required: true },
-      { name: "title", type: "string", required: true },
-      { name: "content", type: "string", required: true },
-      {
-        name: "categories",
-        type: "string",
-        description: "Comma-separated categories (max 2)",
-        required: false,
-      },
-    ],
-    handler: async args => {
-      const categories = args.categories
-        ? (args.categories as string)
+    parameters: z.object({
+      id: z.string().describe("The id of the note."),
+      title: z.string().describe("The title of the note"),
+      content: z.string().describe("The content of the note"),
+      categories: z.string().optional().describe("Comma-separated categories (max 2)"),
+    }),
+    handler: async ({ id, title, content, categories }) => {
+      const parsedCategories = categories
+        ? categories
             .split(",")
             .map(c => c.trim())
             .slice(0, 2)
         : []
 
-      await updateNote(args.id as string, {
-        title: args.title as string,
-        content: args.content as string,
-        categories,
+      await updateNote(id, {
+        title,
+        content,
+        categories: parsedCategories,
       })
-      return `笔记「${args.title}」已更新成功。`
+      return `笔记「${title}」已更新成功。`
     },
-  })
+  }, [])
 
   const totalNotes = allNotes.length
 

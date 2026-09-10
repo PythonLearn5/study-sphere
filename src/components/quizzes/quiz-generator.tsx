@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useCopilotAction } from "@copilotkit/react-core"
+import { useFrontendTool } from "@copilotkit/react-core/v2"
+import { z } from "zod"
 import { CopilotTextarea } from "@copilotkit/react-textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
