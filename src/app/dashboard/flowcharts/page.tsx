@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core"
+import { useCopilotAction } from "@copilotkit/react-core"
+import { useAgentContext } from "@copilotkit/react-core/v2"
 import { CopilotTextarea } from "@copilotkit/react-textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -69,7 +70,7 @@ function FlowchartsComponent() {
   const [description, setDescription] = useState("")
 
   // Make flowcharts data readable to Copilot
-  useCopilotReadable({
+  useAgentContext({
     description: "List of user's flowcharts and current generation state",
     value: JSON.stringify({
       flowcharts,

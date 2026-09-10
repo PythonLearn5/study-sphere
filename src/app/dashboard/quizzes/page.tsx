@@ -2,7 +2,8 @@
 
 import { useQuizzesContext } from "@/lib/quizzes/quizzes-provider"
 import { Question, Quiz } from "@/lib/quizzes/types"
-import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core"
+import { useCopilotAction } from "@copilotkit/react-core"
+import { useAgentContext } from "@copilotkit/react-core/v2"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -78,7 +79,7 @@ function QuizzesComponent() {
 
   const hasActiveFilters = selectedSubject || selectedTopic || selectedDifficulty || showBookmarked || showCompleted
 
-  useCopilotReadable({
+  useAgentContext({
     description: "Quizzes list with filters and organization.",
     value: JSON.stringify({ quizzes, selectedSubject, selectedTopic, selectedDifficulty, showBookmarked, showCompleted }),
   })

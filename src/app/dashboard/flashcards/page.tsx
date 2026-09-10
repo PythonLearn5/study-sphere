@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core"
+import { useCopilotAction } from "@copilotkit/react-core"
+import { useAgentContext } from "@copilotkit/react-core/v2"
 import { CopilotTextarea } from "@copilotkit/react-textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -351,7 +352,7 @@ const FlashcardsPage = () => {
     }
   }
   // Make flashcards data readable to Copilot
-  useCopilotReadable({
+  useAgentContext({
     description: "Current flashcards and study material",
     value: {
       studyMaterial,

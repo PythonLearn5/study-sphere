@@ -5,7 +5,8 @@ import "react-quill/dist/quill.snow.css"
 
 import { NotesProvider, useNotesContext } from "@/lib/notes/notes-provider"
 import { Note } from "@/lib/notes/types"
-import { useCopilotAction, useCopilotReadable } from "@copilotkit/react-core"
+import { useCopilotAction } from "@copilotkit/react-core"
+import { useAgentContext } from "@copilotkit/react-core/v2"
 import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -299,7 +300,7 @@ function NotesComponent() {
     return filtered
   }, [notes, searchQuery, selectedSearchTerms, selectedCategory])
 
-  useCopilotReadable({
+  useAgentContext({
     description: "Notes list with categories and bookmarks.",
     value: JSON.stringify(notes),
   })
