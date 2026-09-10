@@ -106,22 +106,31 @@ function createSafeAdapter(baseAdapter: any, label: string) {
 }
 
 // ============ Fake OpenAI Client（不依赖任何 SDK，复用 llm.ts 统一接口）============
+// OpenAIAdapter 内部调用 this.openai.beta.chat.completions.stream(params)，
+// 我们构建一个相同结构的 fake client，内部桥接到 runChatCompletionStream。
 type StreamChunk = { delta: string; done: boolean; err?: LLMError }
 
 function mapMessages(messages: any) {
+  // CopilotKit/LangChain 消息对象有 _getType()/getContent() 方法，需转为 { role, content }
   return (messages ?? []).map((m: any) => ({
     role: (typeof m?._getType === "function"
-      ? m._getType() === "human"
-        ? "user"
-        : m._getType() === "ai"
-          ? "assistant"
-          : "system"
+      ? m._getType() === "human"   ? "user"
+        : m._getType() === "ai"    ? "assistant"
+        : "system"
         : (m.role as any)) ?? "user",
     content:
       typeof m?.getContent === "function" ? String(m.getContent()) : String(m.content ?? ""),
   }))
 }
 
+/**
+ * 将 runChatCompletionStream 的回调式 API 转为 OpenAI streaming chunk 格式的 async iterable。
+ * - 维护 queue 缓冲 + resolveNext promise 实现 push→pull 桥接
+ * - onToken → push { delta, done:false }
+ * - onDone  → push { delta:"", done:true }
+ * - onError → push { delta:"", done:true, err }
+ * 每个 yielded chunk 格式：{ id, object:"chat.completion.chunk", choices:[{ delta:{content} }] }
+ */
 function createStreamIterable(callParams: ChatCompletionParams) {
   const queue: StreamChunk[] = []
   let resolveNext: ((chunk: StreamChunk) => void) | null = null
@@ -204,6 +213,12 @@ function createStreamIterable(callParams: ChatCompletionParams) {
   }
 }
 
+/**
+ * 构建 fake OpenAI client：{ chat:{completions}, beta:{chat:{completions}} }
+ * - create() : 非流式调 runChatCompletionJSON；stream:true 时走 createStreamIterable
+ * - stream() : OpenAIAdapter.process() 实际调用的路径，同步返回 async iterable
+ * chat 和 beta 共享同一 completions 对象
+ */
 function makeFakeOpenAIClient() {
   const completions = {
     // 非流式 + 旧版流式入口（stream:true 时返回 async iterable）
@@ -263,7 +278,10 @@ function makeFakeOpenAIClient() {
   }
 }
 
-// ============ 构建 Service Adapter（统一使用 Fake OpenAI Client）============
+/**
+ * 构建 ServiceAdapter：FakeClient → OpenAIAdapter → SafeAdapter（Proxy 错误兜底）
+ * 模块加载时构建一次；失败则 serviceAdapter=null，POST 返回 503
+ */
 function buildServiceAdapter(): any {
   if (!LLM_API_KEY_SET) {
     throw new Error(
@@ -280,6 +298,7 @@ function buildServiceAdapter(): any {
   return createSafeAdapter(baseAdapter, "OpenAIAdapter(Vercel-Gateway·FakeClient)")
 }
 
+// 模块级构建：服务启动时执行一次
 let serviceAdapter: any
 try {
   serviceAdapter = buildServiceAdapter()
@@ -292,6 +311,12 @@ try {
   serviceAdapter = null
 }
 
+/**
+ * POST /api/copilotkit — CopilotKit 主入口
+ * - serviceAdapter 为 null → 503（LLM 未配置）
+ * - 否则交给 copilotRuntimeNextJSAppRouterEndpoint 处理 GraphQL over SSE
+ * - GET /api/copilotkit/info 握手也由此 endpoint 自动托管（useSingleEndpoint=true）
+ */
 export const POST = async (req: NextRequest) => {
   if (!serviceAdapter) {
     return new Response(

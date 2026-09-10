@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { LLM_MODELS, LLM_BASE_URL_USED, runChatCompletionJSON, ChatMessage } from '@/lib/llm'
 
+/**
+ * POST /api/copilotkit/generate-flashcards
+ * 输入学习材料 + 参数，调用 LLM 生成闪卡（非流式 JSON 模式）。
+ * 返回 { flashcards[], metadata } 结构。
+ */
 export async function POST(request: NextRequest) {
   try {
+    // 守卫1：API Key 未配置 → 503
     if (!process.env.LLM_API_KEY && !process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         {
@@ -14,8 +20,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 解析请求参数：studyMaterial(必填), numberOfCards, difficulty, focusArea
     const { studyMaterial, numberOfCards, difficulty, focusArea } = await request.json()
 
+    // 守卫2：学习材料为空 → 400
     if (!studyMaterial?.trim()) {
       return NextResponse.json(
         { error: 'Study material is required' },
@@ -23,6 +31,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 构建 user prompt：根据 difficulty + focusArea 指定生成策略，
+    // 要求返回 { flashcards: [{ question, answer, topic, tags, audioReadableAnswer }] } JSON
     const prompt = `You are an expert educational content creator. Create ${numberOfCards} high-quality flashcards based on the following study material. 
 
 Study Material:
@@ -53,6 +63,7 @@ Return your response as a JSON object with the following structure:
 
 Make sure the JSON is valid and contains exactly ${numberOfCards} flashcards.`
 
+    // system + user 消息，强制 JSON 输出
     const messages: ChatMessage[] = [
       {
         role: 'system',
@@ -65,6 +76,7 @@ Make sure the JSON is valid and contains exactly ${numberOfCards} flashcards.`
       },
     ]
 
+    // 调用 LLM（非流式，JSON 模式），使用 smart 模型
     const { content } = await runChatCompletionJSON({
       messages,
       model: LLM_MODELS.smart,
@@ -77,6 +89,7 @@ Make sure the JSON is valid and contains exactly ${numberOfCards} flashcards.`
       throw new Error('No response from AI (empty content)')
     }
 
+    // 解析 AI 返回的 JSON，校验 flashcards 数组非空
     let flashcardsData
     try {
       flashcardsData = JSON.parse(content)
@@ -93,6 +106,7 @@ Make sure the JSON is valid and contains exactly ${numberOfCards} flashcards.`
       throw new Error('No flashcards generated')
     }
 
+    // 逐张校验：必须有 question + answer，补全 id / audioReadableAnswer / topic / tags
     const validatedFlashcards = flashcardsData.flashcards.map((card: any, index: number) => {
       if (!card.question || !card.answer) {
         throw new Error(`Flashcard ${index + 1} is missing question or answer`)
@@ -107,6 +121,7 @@ Make sure the JSON is valid and contains exactly ${numberOfCards} flashcards.`
       }
     })
 
+    // 返回闪卡 + metadata
     return NextResponse.json({
       flashcards: validatedFlashcards,
       metadata: {
@@ -117,6 +132,7 @@ Make sure the JSON is valid and contains exactly ${numberOfCards} flashcards.`
       },
     })
   } catch (error: any) {
+    // 错误处理：模型相关错误 → 503；其他 → 500
     console.error('Error generating flashcards ⚠️ :', {
       name: error?.name,
       message: error?.message,
