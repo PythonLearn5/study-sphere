@@ -84,7 +84,7 @@ function QuizzesComponent() {
   })
 
   useCopilotAction({
-    name: "Create a Quiz",
+    name: "create_a_quiz",
     description: "Adds a quiz to quizzes list.",
     parameters: [
       {

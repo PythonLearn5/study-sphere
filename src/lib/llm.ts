@@ -62,6 +62,10 @@ export interface ChatCompletionParams {
   max_tokens?: number;
   response_format?: { type?: "json_object" | "text" };
   stream?: boolean;
+  /** CopilotKit useCopilotAction 注册的工具定义 */
+  tools?: any[];
+  /** 控制 tool 调用行为：auto / none / 指定 */
+  tool_choice?: "auto" | "none" | "required" | any;
 }
 export interface LLMError extends Error {
   status?: number;
@@ -92,6 +96,8 @@ export async function runChatCompletionJSON(
     max_tokens: params.max_tokens ?? 2048,
   };
   if (params.response_format?.type) bodyObj.response_format = params.response_format;
+  if (params.tools) bodyObj.tools = params.tools;
+  if (params.tool_choice) bodyObj.tool_choice = params.tool_choice;
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -139,8 +145,14 @@ export interface StreamTokenEvent {
   finalFullContent?: string;
 }
 
-function parseSSELinesIntoDeltas(rawChunk: string): { leftover: string; deltas: string[]; done: boolean } {
+/**
+ * 解析 SSE 帧为 delta 内容。
+ * - deltas: 文本内容片段（delta.content）
+ * - rawDeltas: 完整 delta 对象（含 content 和 tool_calls，供 CopilotKit fake client 使用）
+ */
+function parseSSELinesIntoDeltas(rawChunk: string): { leftover: string; deltas: string[]; rawDeltas: any[]; done: boolean } {
   const deltas: string[] = [];
+  const rawDeltas: any[] = [];
   let done = false;
   const parts = rawChunk.split(/\r?\n\r?\n/);
   const leftover = parts.pop() || "";
@@ -157,14 +169,19 @@ function parseSSELinesIntoDeltas(rawChunk: string): { leftover: string; deltas: 
       }
       try {
         const obj = JSON.parse(data);
-        const delta: string = obj?.choices?.[0]?.delta?.content ?? "";
-        if (delta) deltas.push(delta);
+        const delta = obj?.choices?.[0]?.delta;
+        if (!delta) continue;
+        // 收集完整 delta 对象（含 tool_calls）
+        rawDeltas.push(delta);
+        // 同时收集文本内容
+        const content: string = delta.content ?? "";
+        if (content) deltas.push(content);
       } catch {
         // 忽略非法单帧
       }
     }
   }
-  return { leftover, deltas, done };
+  return { leftover, deltas, rawDeltas, done };
 }
 
 /**
@@ -177,6 +194,8 @@ export async function runChatCompletionStream(
     onDone: (fullContent: string) => void | Promise<void>;
     onError: (err: LLMError) => void | Promise<void>;
     signal?: AbortSignal;
+    /** 接收完整 delta 对象（含 tool_calls），供 CopilotKit fake client 使用 */
+    onRawDelta?: (delta: any) => void | Promise<void>;
   },
 ): Promise<void> {
   if (!LLM_API_KEY_SET) {
@@ -198,6 +217,8 @@ export async function runChatCompletionStream(
     max_tokens: params.max_tokens ?? 2048,
   };
   if (params.response_format?.type) bodyObj.response_format = params.response_format;
+  if (params.tools) bodyObj.tools = params.tools;
+  if (params.tool_choice) bodyObj.tool_choice = params.tool_choice;
 
   let res: Response;
   try {
@@ -263,6 +284,12 @@ export async function runChatCompletionStream(
         full += delta;
         await handlers.onToken(delta);
       }
+      // 透传完整 delta 对象（含 tool_calls）给 onRawDelta
+      if (handlers.onRawDelta) {
+        for (const rawDelta of parsed.rawDeltas) {
+          await handlers.onRawDelta(rawDelta);
+        }
+      }
       if (parsed.done) break;
     }
     if (buffer) {
@@ -270,6 +297,11 @@ export async function runChatCompletionStream(
       for (const delta of parsed.deltas) {
         full += delta;
         await handlers.onToken(delta);
+      }
+      if (handlers.onRawDelta) {
+        for (const rawDelta of parsed.rawDeltas) {
+          await handlers.onRawDelta(rawDelta);
+        }
       }
     }
     await handlers.onDone(full);

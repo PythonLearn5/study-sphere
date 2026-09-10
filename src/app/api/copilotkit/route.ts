@@ -108,7 +108,8 @@ function createSafeAdapter(baseAdapter: any, label: string) {
 // ============ Fake OpenAI Client（不依赖任何 SDK，复用 llm.ts 统一接口）============
 // OpenAIAdapter 内部调用 this.openai.beta.chat.completions.stream(params)，
 // 我们构建一个相同结构的 fake client，内部桥接到 runChatCompletionStream。
-type StreamChunk = { delta: string; done: boolean; err?: LLMError }
+// chunk.delta 现在是完整 delta 对象（含 content 和/或 tool_calls）
+type StreamChunk = { delta: any; done: boolean; err?: LLMError }
 
 function mapMessages(messages: any) {
   // CopilotKit/LangChain 消息对象有 _getType()/getContent() 方法，需转为 { role, content }
@@ -126,10 +127,11 @@ function mapMessages(messages: any) {
 /**
  * 将 runChatCompletionStream 的回调式 API 转为 OpenAI streaming chunk 格式的 async iterable。
  * - 维护 queue 缓冲 + resolveNext promise 实现 push→pull 桥接
- * - onToken → push { delta, done:false }
- * - onDone  → push { delta:"", done:true }
- * - onError → push { delta:"", done:true, err }
- * 每个 yielded chunk 格式：{ id, object:"chat.completion.chunk", choices:[{ delta:{content} }] }
+ * - onRawDelta → push { delta:<完整 delta 对象>, done:false }
+ * - onDone  → push { delta:null, done:true }
+ * - onError → push { delta:null, done:true, err }
+ * 每个 yielded chunk 格式：{ id, object:"chat.completion.chunk", choices:[{ delta }] }
+ * delta 可能含 content（文本）或 tool_calls（工具调用），CopilotKit 会分别处理
  */
 function createStreamIterable(callParams: ChatCompletionParams) {
   const queue: StreamChunk[] = []
@@ -147,17 +149,18 @@ function createStreamIterable(callParams: ChatCompletionParams) {
   }
 
   runChatCompletionStream(callParams, {
-    onToken: (delta) => {
-      if (!delta) return
+    onToken: () => {}, // content 已通过 onRawDelta 透传，这里不需要重复处理
+    onRawDelta: (delta) => {
+      if (!delta || (!delta.content && !delta.tool_calls)) return
       pushChunk({ delta, done: false })
     },
     onDone: () => {
       streamFinished = true
-      pushChunk({ delta: "", done: true })
+      pushChunk({ delta: null, done: true })
     },
     onError: (err) => {
       streamFinished = true
-      pushChunk({ delta: "", done: true, err })
+      pushChunk({ delta: null, done: true, err })
     },
   })
 
@@ -173,7 +176,7 @@ function createStreamIterable(callParams: ChatCompletionParams) {
             object: "chat.completion.chunk",
             created: Math.floor(Date.now() / 1000),
             model: callParams.model,
-            choices: [{ index: 0, delta: { content: chunk.delta }, finish_reason: null }],
+            choices: [{ index: 0, delta: chunk.delta, finish_reason: null }],
           },
           done: false,
         }
@@ -197,7 +200,7 @@ function createStreamIterable(callParams: ChatCompletionParams) {
               object: "chat.completion.chunk",
               created: Math.floor(Date.now() / 1000),
               model: callParams.model,
-              choices: [{ index: 0, delta: { content: chunk.delta }, finish_reason: null }],
+              choices: [{ index: 0, delta: chunk.delta, finish_reason: null }],
             },
             done: false,
           })
@@ -223,7 +226,7 @@ function makeFakeOpenAIClient() {
   const completions = {
     // 非流式 + 旧版流式入口（stream:true 时返回 async iterable）
     create: async function (params: any) {
-      const { stream = false, messages, model, temperature, max_tokens, response_format } =
+      const { stream = false, messages, model, temperature, max_tokens, response_format, tools, tool_choice } =
         params as ChatCompletionParams & { stream?: boolean }
 
       const callParams: ChatCompletionParams = {
@@ -232,6 +235,8 @@ function makeFakeOpenAIClient() {
         temperature,
         max_tokens,
         response_format,
+        tools,
+        tool_choice,
       }
 
       // ======== 非流式 ========
@@ -258,7 +263,7 @@ function makeFakeOpenAIClient() {
     },
     // OpenAIAdapter.process() 调用的是 beta.chat.completions.stream()，同步返回 async iterable
     stream: function (params: any) {
-      const { messages, model, temperature, max_tokens, response_format } =
+      const { messages, model, temperature, max_tokens, response_format, tools, tool_choice } =
         params as ChatCompletionParams & { stream?: boolean }
 
       const callParams: ChatCompletionParams = {
@@ -267,6 +272,8 @@ function makeFakeOpenAIClient() {
         temperature,
         max_tokens,
         response_format,
+        tools,
+        tool_choice,
       }
       return createStreamIterable(callParams)
     },

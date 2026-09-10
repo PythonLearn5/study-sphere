@@ -305,7 +305,7 @@ function NotesComponent() {
   })
 
   useCopilotAction({
-    name: "Create a Note",
+    name: "create_a_note",
     description: "Adds a note to notes list with optional categories.",
     parameters: [
       { name: "title", type: "string", required: true },
@@ -317,7 +317,7 @@ function NotesComponent() {
         required: false,
       },
     ],
-    handler: args => {
+    handler: async args => {
       const categories = args.categories
         ? (args.categories as string)
             .split(",")
@@ -334,13 +334,14 @@ function NotesComponent() {
         createdAt: "",
         modifiedAt: ""
       }
-      createNote(newNote)
+      await createNote(newNote)
       console.log("Note created", newNote)
+      return `笔记「${newNote.title}」已创建成功。`
     },
   })
 
   useCopilotAction({
-    name: "Delete a Note",
+    name: "delete_a_note",
     description: "Deletes a note from notes list.",
     parameters: [
       {
@@ -350,13 +351,14 @@ function NotesComponent() {
         required: true,
       },
     ],
-    handler: args => {
-      deleteNote(args.id as string)
+    handler: async args => {
+      await deleteNote(args.id as string)
+      return `笔记已删除。`
     },
   })
 
   useCopilotAction({
-    name: "Update a Note",
+    name: "update_a_note",
     description: "Updates a note from notes list with optional categories.",
     parameters: [
       { name: "id", type: "string", required: true },
@@ -369,7 +371,7 @@ function NotesComponent() {
         required: false,
       },
     ],
-    handler: args => {
+    handler: async args => {
       const categories = args.categories
         ? (args.categories as string)
             .split(",")
@@ -377,11 +379,12 @@ function NotesComponent() {
             .slice(0, 2)
         : []
 
-      updateNote(args.id as string, {
+      await updateNote(args.id as string, {
         title: args.title as string,
         content: args.content as string,
         categories,
       })
+      return `笔记「${args.title}」已更新成功。`
     },
   })
 

@@ -47,6 +47,9 @@ export function useNotes() {
   const createNote = async (note: Omit<Note, "createdAt" | "modifiedAt">) => {
     const res = await fetch("/api/notes", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(note),
     });
     if (res.ok) {
@@ -58,6 +61,9 @@ export function useNotes() {
   const updateNote = async (id: string, updated: Partial<Note>) => {
     const res = await fetch("/api/notes", {
       method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ id, ...updated }),
     });
     if (res.ok) {
