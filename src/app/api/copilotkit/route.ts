@@ -4,6 +4,8 @@ import {
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime"
 import { AbstractAgent } from "@ag-ui/client"
+import type { BaseEvent } from "@ag-ui/core"
+import { EMPTY, type Observable } from "rxjs"
 import { NextRequest } from "next/server"
 import {
   LLM_MODELS,
@@ -31,11 +33,10 @@ class DefaultAgent extends AbstractAgent {
         "擅长笔记、闪卡、流程图、测验的一般性学习问题。",
     })
   }
-  override run(_input: any): any {
-    throw new Error(
-      "[DefaultAgent] 不应该走到这里：delegateAgentProcessingToServiceAdapter=true 时，" +
-        "所有 LLM 调用都由 ServiceAdapter 处理。",
-    )
+  // delegateAgentProcessingToServiceAdapter=true 时，LLM 调用由 ServiceAdapter 处理。
+  // 但 legacy_to_be_removed_runAgentBridged 仍会调 run()，返回空 Observable 直接完成。
+  protected run(): Observable<BaseEvent> {
+    return EMPTY
   }
 }
 
@@ -112,16 +113,32 @@ function createSafeAdapter(baseAdapter: any, label: string) {
 type StreamChunk = { delta: any; done: boolean; err?: LLMError }
 
 function mapMessages(messages: any) {
-  // CopilotKit/LangChain 消息对象有 _getType()/getContent() 方法，需转为 { role, content }
-  return (messages ?? []).map((m: any) => ({
-    role: (typeof m?._getType === "function"
-      ? m._getType() === "human"   ? "user"
-        : m._getType() === "ai"    ? "assistant"
-        : "system"
-        : (m.role as any)) ?? "user",
-    content:
-      typeof m?.getContent === "function" ? String(m.getContent()) : String(m.content ?? ""),
-  }))
+  // CopilotKit/LangChain 消息对象有 _getType()/getContent() 方法，需转为 OpenAI 格式。
+  // 必须保留 tool 角色及 tool_call_id，否则 OpenAI API 报 400。
+  return (messages ?? []).map((m: any) => {
+    const type = typeof m?._getType === "function" ? m._getType() : m?.role;
+    let role: string;
+    switch (type) {
+      case "human":    role = "user"; break;
+      case "ai":       role = "assistant"; break;
+      case "tool":     role = "tool"; break;
+      default:         role = type ?? "user";
+    }
+
+    const result: any = {
+      role,
+      content: typeof m?.getContent === "function" ? String(m.getContent() ?? "") : String(m.content ?? ""),
+    };
+
+    // tool 消息必须携带 tool_call_id（关联 assistant 的 tool_call）
+    if (m?.tool_call_id) result.tool_call_id = m.tool_call_id;
+    // assistant 消息可能携带 tool_calls 数组
+    if (m?.tool_calls) result.tool_calls = m.tool_calls;
+    // tool 消息的工具名
+    if (m?.name) result.name = m.name;
+
+    return result;
+  });
 }
 
 /**

@@ -50,10 +50,16 @@ export const LLM_MODELS = {
 } as const;
 
 // ============ 共享类型 ============
-export type ChatRole = "system" | "user" | "assistant";
+export type ChatRole = "system" | "user" | "assistant" | "tool";
 export interface ChatMessage {
   role: ChatRole;
   content: string;
+  /** tool 角色消息必须携带，关联对应的 tool_call */
+  tool_call_id?: string;
+  /** assistant 消息携带的 tool 调用列表 */
+  tool_calls?: any[];
+  /** tool 消息的工具名 */
+  name?: string;
 }
 export interface ChatCompletionParams {
   messages: ChatMessage[];
